@@ -12,14 +12,14 @@ snapshot below links its complete contract.
 | Field | Value |
 | --- | --- |
 | Phase | Post-vertical planning checkpoint |
-| Implementation state | S003 delivered the first configuration-backed `workspace-symbols` vertical flow on a dedicated PR branch. Local focused and full gates passed; three-OS CI evidence is pending maintainer review of the open PR. |
+| Implementation state | S003 delivered the first configuration-backed `workspace-symbols` vertical flow on a dedicated PR branch. Local and three-OS CI gates are green; the PR remains open for maintainer review (do not merge until approved). |
 | Authorized stage | **None — planning checkpoint** |
 | Contract | Completed S003: [`docs/stages/S003-configuration-backed-workspace-symbols.md`](stages/S003-configuration-backed-workspace-symbols.md). No next stage is authorized. |
 | Progress | S003 implementation is complete in [PR #6](https://github.com/juliopolycarpo/mango-lsp/pull/6) on branch `feat/s003-workspace-symbols-vertical-flow` and awaits maintainer review (do not merge until approved). Q-009 resolved as D-016; clap `string` feature and TOML/URI deps recorded as D-017/D-018. |
 | Working branch or worktree | `feat/s003-workspace-symbols-vertical-flow` (implementation PR; merge only after explicit maintainer approval) |
-| Last coherent checkpoint | Local validation complete: `vertical_flow` 12/12, `downstream_lifecycle` 12/12, full suite 46 tests, fmt/clippy/offline gates green. CI URL to be recorded when the PR Actions run finishes. |
+| Last coherent checkpoint | Local and three-OS CI complete on `9cb5b8d`: [Actions run 29210426310](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29210426310) — format/lint pass; Ubuntu/macOS `vertical_flow` 12/12 + full suite pass; Windows `vertical_flow` 13/13 (includes Windows drive URI test) + full suite pass. PR #6 MERGEABLE/CLEAN with no unresolved comments; merge still pending maintainer approval. |
 | Remaining work | Maintainer review and merge of the S003 PR. After merge, revise later work from vertical-flow evidence at the planning checkpoint; do not start S004 without a reviewed contract. |
-| Validation evidence | Local: `cargo test --all-targets --locked vertical_flow -- --nocapture` → 12 passed; full `cargo test --all-targets --locked` → 46 passed (19 unit + 3 CLI + 12 lifecycle + 12 vertical_flow); `cargo fmt --check`, `clippy -D warnings`, offline build/test, and CLI smokes passed. Three-OS CI: pending on the open PR. |
+| Validation evidence | Local: `cargo test --all-targets --locked vertical_flow -- --nocapture` → 12 passed; full `cargo test --all-targets --locked` → 46 passed (19 unit + 3 CLI + 12 lifecycle + 12 vertical_flow); `cargo fmt --check`, `clippy -D warnings`, offline build/test, and CLI smokes passed. Three-OS CI ([Actions run 29210426310](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29210426310) on `9cb5b8d`): format/lint pass; Ubuntu and macOS focused `vertical_flow` 12/12 and full suite pass; Windows focused `vertical_flow` 13/13 (includes Windows drive URI test) and full suite pass. PR #6 MERGEABLE/CLEAN; no unresolved comments; merge not claimed. |
 | Blockers | None for implementation. Merge is gated on explicit maintainer approval. Q-011 remains required only before public distribution. |
 
 S003's authorization prerequisites were satisfied before implementation. Completion
@@ -61,8 +61,8 @@ the first vertical flow rather than expanded into a speculative backlog.
 | Last completed unit | S003 vertical flow: config/URI/query boundaries, one-operation session with interleaved `window/logMessage` and `workspace/workspaceFolders`, normalized envelope + redacted events, fake modes, `vertical_flow` tests, CI gate, D-016/D-017/D-018 |
 | Next action | Maintainer reviews and approves the S003 PR; after merge, run the post-vertical checkpoint. Do not authorize or implement S004 implicitly. |
 | Changed paths | `src/{main,lib,lifecycle,protocol,config,uri,output,symbols,operation}.rs`, `src/bin/mango_lsp_fake_server.rs`, `tests/vertical_flow.rs`, `tests/downstream_lifecycle.rs`, `Cargo.toml`, `Cargo.lock`, `.github/workflows/ci.yml`, `docs/{STATUS,PROJECT}.md`, `README.md` |
-| Checks run | Local mandatory S003 gates passed (focused vertical_flow 12/12; full 46; fmt; clippy `-D warnings`; offline build/test; `--help`/`--version`/`workspace-symbols --help`; unknown option exit 2). CI pending PR. |
-| Failed or unavailable checks | Three-OS CI evidence not yet recorded (PR not merged; Actions run pending). |
+| Checks run | Local mandatory S003 gates passed (focused vertical_flow 12/12; full 46; fmt; clippy `-D warnings`; offline build/test; `--help`/`--version`/`workspace-symbols --help`; unknown option exit 2). Three-OS CI green on [Actions run 29210426310](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29210426310) (`9cb5b8d`): format/lint; Ubuntu/macOS vertical_flow 12/12 + full suite; Windows vertical_flow 13/13 + full suite. |
+| Failed or unavailable checks | None for S003 validation. Residual: cleanup remains direct-child only; CI is green pending maintainer merge of the open PR. |
 | Open implementation decisions | None for S003. Q-003/Q-008/Q-010/Q-011 remain open for later stages. |
 | Resume notes | Public CLI: `workspace-symbols --config --workspace --query`. Limits: config 64 KiB; server id 64 B; command 4 KiB; args 64×4 KiB; query 4 KiB; symbols 10_000; frame header 64 KiB / body 16 MiB; stderr retain 64 KiB; operation timeout 5s; force-shutdown 2s. Cleanup remains direct-child only. Fake is test-only. |
 
@@ -77,7 +77,7 @@ unless another complete contract is authorized.
 | P000 | Established the minimal planning and continuity system and specified S001. | Repository documentation and its initial signed commit. | The bootstrap prompt was intentionally retired after its durable requirements were incorporated. |
 | S001 | Established the root Rust 2024 application, deterministic bootstrap CLI behavior, real-binary integration tests, pinned toolchain/quality policy, and three-OS CI baseline. | All mandatory local commands passed with Rust 1.97.0; offline build/test passed; invalid option exited 2 with a stderr diagnostic; [Actions run 29190660631](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29190660631) passed format/lint and Linux, macOS, and Windows check/build/test jobs, with 3 CLI tests executed on each OS. | None. An independent review evidence-timestamp finding was resolved by rerunning the complete final-tree validation suite. |
 | S002 | Proved bounded direct-child STDIO LSP lifecycle: project-owned framing, minimal JSON-RPC types via serde_json, std process/thread supervision, concurrent stderr drain with truncation, forced cleanup/reap, and hostile fake-server acceptance tests. PR #4 subsequently corrected failure paths to preserve child diagnostics and defer pipe-worker joins until after termination/reap. | Original local and [three-OS CI evidence](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29193519305): 11 lifecycle, 9 unit, and 3 CLI tests (23 total), plus fmt/check/clippy/offline gates. Revised `main` at `9f5692e`: [Actions run 29200218085](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29200218085) passed quality and 12/12 focused lifecycle tests plus the 24-test complete suite on Ubuntu, macOS, and Windows, including diagnostic preservation, backpressure, and forced cleanup. Decisions D-012 and D-013. | Shipped a separate `mango-lsp-fake-server` test binary (not a product CLI subcommand). Packaging must exclude it before release (O-001). Descendant-inherited pipes remain outside the direct-child guarantee. |
-| S003 | Delivered configuration-backed `workspace-symbols`: strict one-server TOML, workspace file URI, initialize/`workspace/symbol` session with interleaved supported messages, version 1 JSON stdout envelope, redacted JSON Lines stderr events, bounded error kinds/exits, fake modes, and `vertical_flow` process tests. | Local: focused `vertical_flow` 12/12; full suite 46; fmt/clippy/offline; CLI smokes. Decisions D-016 (Q-009), D-017 (clap `string`), D-018 (`toml` + `percent-encoding`). Three-OS CI pending open PR. | Timeout errors retain `Timeout` identity after cleanup (public kind `timeout`) instead of being rewritten to `Cleanup`. Clap feature set expanded with `string` (D-017). |
+| S003 | Delivered configuration-backed `workspace-symbols`: strict one-server TOML, workspace file URI, initialize/`workspace/symbol` session with interleaved supported messages, version 1 JSON stdout envelope, redacted JSON Lines stderr events, bounded error kinds/exits, fake modes, and `vertical_flow` process tests. | Local: focused `vertical_flow` 12/12; full suite 46; fmt/clippy/offline; CLI smokes. Decisions D-016 (Q-009), D-017 (clap `string`), D-018 (`toml` + `percent-encoding`). Three-OS CI: [Actions run 29210426310](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29210426310) on `9cb5b8d` — format/lint pass; Ubuntu/macOS `vertical_flow` 12/12 + full suite pass; Windows `vertical_flow` 13/13 (includes Windows drive URI test) + full suite pass. PR #6 MERGEABLE/CLEAN, no unresolved comments; remains open for maintainer review (merge not claimed). | Timeout errors retain `Timeout` identity after cleanup (public kind `timeout`) instead of being rewritten to `Cleanup`. Clap feature set expanded with `string` (D-017). |
 
 ## Discovery and opportunity backlog
 
@@ -94,10 +94,11 @@ An entry records an opportunity; it does not authorize implementation. Use IDs
 
 ## Current deviations and blockers
 
-S003 local evidence is complete. Three-OS CI evidence is pending the open
-implementation PR. Authorization is a planning checkpoint; no subsequent stage
-is authorized. Cleanup remains direct-child only. Q-011 remains deliberately
-open until public distribution.
+S003 local and three-OS CI evidence is complete on the open implementation PR
+([Actions run 29210426310](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29210426310)).
+CI is green pending maintainer merge. Authorization is a planning checkpoint;
+no subsequent stage is authorized. Cleanup remains direct-child only. Q-011
+remains deliberately open until public distribution.
 
 ## State transition checklist
 
