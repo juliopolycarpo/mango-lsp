@@ -151,8 +151,9 @@ The project follows a short evidence ladder:
 4. Reassess crate boundaries, public protocol shape, real-server compatibility,
    multi-server routing, and release architecture from that evidence.
 
-Only step 1 is currently specified and authorized. `docs/STATUS.md` owns the
-current sequence and gates.
+Step 1 is complete. `docs/STATUS.md` owns the current sequence and gates; no
+subsequent step may begin until its complete contract is separately reviewed and
+explicitly authorized there.
 
 ## Why this repository structure
 

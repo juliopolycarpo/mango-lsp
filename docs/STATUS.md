@@ -19,7 +19,7 @@ snapshot below links its complete contract.
 | Working branch or worktree | `feat/s001-rust-cli-foundation` / PR #1 |
 | Last coherent checkpoint | S001 is implemented, locally validated, independently reviewed, and verified by live Linux, macOS, and Windows CI. |
 | Remaining work | Maintainer review and merge of PR #1. After merge, specify and separately authorize S002 before implementation. |
-| Validation evidence | Final-tree mandatory gates and a separate offline build/test passed locally on Linux with Rust 1.97.0. Three real-binary CLI tests passed locally and in each OS job in [Actions run 29190589291](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29190589291); logs were inspected and showed 3 passed, 0 failed, and 0 ignored on Linux, macOS, and Windows. Direct invalid-input smoke exited 2 with a useful stderr diagnostic. |
+| Validation evidence | Final-tree mandatory gates and a separate offline build/test passed locally on Linux with Rust 1.97.0. Three real-binary CLI tests passed locally and in each OS job in [Actions run 29190660631](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29190660631); logs were inspected and showed 3 passed, 0 failed, and 0 ignored on Linux, macOS, and Windows. Direct invalid-input smoke exited 2 with a useful stderr diagnostic. |
 | Blockers | None. Q-011 (license) must be resolved before public distribution, not before S001. |
 
 No implementation stage is currently authorized. After PR #1 is merged, the
@@ -78,7 +78,7 @@ unless another complete contract is authorized.
 | Stage | Outcome | Evidence | Material deviations |
 | --- | --- | --- | --- |
 | P000 | Established the minimal planning and continuity system and specified S001. | Repository documentation and its initial signed commit. | The bootstrap prompt was intentionally retired after its durable requirements were incorporated. |
-| S001 | Established the root Rust 2024 application, deterministic bootstrap CLI behavior, real-binary integration tests, pinned toolchain/quality policy, and three-OS CI baseline. | All mandatory local commands passed with Rust 1.97.0; offline build/test passed; invalid option exited 2 with a stderr diagnostic; [Actions run 29190589291](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29190589291) passed format/lint and Linux, macOS, and Windows check/build/test jobs, with 3 CLI tests executed on each OS. | None. An independent review evidence-timestamp finding was resolved by rerunning the complete final-tree validation suite. |
+| S001 | Established the root Rust 2024 application, deterministic bootstrap CLI behavior, real-binary integration tests, pinned toolchain/quality policy, and three-OS CI baseline. | All mandatory local commands passed with Rust 1.97.0; offline build/test passed; invalid option exited 2 with a stderr diagnostic; [Actions run 29190660631](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29190660631) passed format/lint and Linux, macOS, and Windows check/build/test jobs, with 3 CLI tests executed on each OS. | None. An independent review evidence-timestamp finding was resolved by rerunning the complete final-tree validation suite. |
 
 ## Discovery and opportunity backlog
 
