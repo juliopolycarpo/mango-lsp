@@ -93,6 +93,8 @@ that names the superseded record, rationale, consequences, and migration impact.
 | D-007 | 2026-07-12 | External consumers will receive a public, versioned protocol. | Stabilization waits for vertical evidence; schemas and a TypeScript client may be generated if that proves useful. |
 | D-008 | 2026-07-12 | Work proceeds as sequential, reviewable stages in clean contexts. | Only one stage is authorized at a time, repository state replaces chat memory, and repository-modifying work is not parallelized. |
 | D-009 | 2026-07-12 | English is the repository's default language. | Any non-English content needs a documented interoperability, localization, or test reason. |
+| D-010 | 2026-07-12 | The project uses Rust 2024 and pins the contributor and CI toolchain to Rust 1.97.0, which is also the initial MSRV. Pinning the current stable toolchain and its formatter and linter components makes clean-clone results reproducible; compatibility with older compilers is not yet a product requirement. | `rust-toolchain.toml`, Cargo metadata, local gates, and CI use the same exact toolchain. Raising the MSRV requires an explicit decision update and validation. |
+| D-011 | 2026-07-12 | The CLI boundary uses clap 4.6.1's builder API with only its `std`, `help`, `usage`, and `error-context` features. Its maintained help and diagnostic behavior fits expected command growth better than a project-owned parser, while avoiding derive macros, terminal styling, suggestions, native dependencies, and duplicate version constants. | Bootstrap and future CLI arguments should use this boundary while the dependency remains justified; the public service protocol remains separate. |
 
 ## Open questions
 
@@ -101,8 +103,6 @@ needs the answer; add the resulting decision above.
 
 | ID | Question | Decision point |
 | --- | --- | --- |
-| Q-001 | Which Rust edition, pinned toolchain policy, and minimum supported Rust version should the project use? | S001, using current toolchain support and contributor reproducibility evidence. |
-| Q-002 | Which CLI parsing approach justifies its dependency and maintenance cost? | S001, against the small help/version contract and expected command growth. |
 | Q-003 | What operating-system and architecture matrix is required for releases? | Start evidence in S001 CI; freeze before release automation. |
 | Q-004 | What configuration format, discovery rule, precedence, and validation model should be public? | Before the configuration-backed vertical flow. |
 | Q-005 | Which async runtime, process APIs, and shutdown model best satisfy cross-platform supervision? | During the downstream lifecycle proof, after small experiments if needed. |
@@ -151,8 +151,9 @@ The project follows a short evidence ladder:
 4. Reassess crate boundaries, public protocol shape, real-server compatibility,
    multi-server routing, and release architecture from that evidence.
 
-Only step 1 is currently specified and authorized. `docs/STATUS.md` owns the
-current sequence and gates.
+Step 1 is complete. `docs/STATUS.md` owns the current sequence and gates; no
+subsequent step may begin until its complete contract is separately reviewed and
+explicitly authorized there.
 
 ## Why this repository structure
 
