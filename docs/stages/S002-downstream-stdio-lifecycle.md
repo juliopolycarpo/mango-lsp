@@ -1,8 +1,8 @@
 # S002: Bounded downstream STDIO lifecycle
 
-This file is the complete review candidate for the second executable stage. It
-is executable only while `docs/STATUS.md` names S002 as the authorized stage;
-authoring or linking this contract does not authorize implementation.
+This file is the complete contract for the second executable stage. It is
+executable only while `docs/STATUS.md` names S002 as the authorized stage;
+`docs/STATUS.md` also owns progress.
 
 ## Minimum context
 
@@ -124,8 +124,7 @@ stabilize a public Rust or service API.
 - S001 is present on `main` at squash commit `40c8d0f` with its local and
   three-operating-system evidence recorded in `docs/STATUS.md`.
 - Before implementation begins, `docs/STATUS.md` must explicitly name S002 as
-  the authorized stage and link this contract. Its current review-candidate
-  state is not authorization.
+  the authorized stage and link this contract.
 - Work begins on a writable S002 branch with unrelated user changes preserved.
 - The pinned Rust 1.97.0 toolchain and the existing Linux, macOS, and Windows CI
   matrix remain available.
