@@ -82,8 +82,8 @@ stabilize a public Rust or service API.
   indication when retained output was truncated.
 - A deterministic, project-owned fake server with modes that prove the normal
   lifecycle, fragmented protocol output, diagnostic backpressure, malformed or
-  oversized input, mismatched response IDs, early exit, and refusal to shut
-  down.
+  oversized input, mismatched response IDs or an invalid `jsonrpc` version,
+  early exit, and refusal to shut down.
 - Focused unit and process-level regression tests. The fake must be test-only,
   offline, cross-platform, and must not become a user-visible CLI command or a
   release artifact.
@@ -187,7 +187,10 @@ The implementing agent may choose:
   gate indefinitely;
 - whether protocol encoding and decoding share one codec type or separate
   responsibilities, provided byte framing can be tested independently from
-  process ownership.
+  process ownership;
+- treatment of unrecognized header fields and of the `Content-Type` media type
+  beyond its charset parameter, provided the required charset handling, size
+  limits, and rejection cases in this contract are enforced.
 
 Dependencies must solve a present S002 need. Prefer pure Rust dependencies that
 support the pinned toolchain. Keep feature sets narrow, retain the committed
@@ -252,9 +255,10 @@ The coherent change must provide:
 4. A successful lifecycle returns the expected minimal initialize result only
    after the fake exits with status 0, the direct child has been reaped, pipe
    workers have finished, and no background task or thread remains detached.
-5. A response with an unknown or mismatched ID cannot satisfy the pending
-   request. The operation returns a specific correlation/protocol error and
-   still cleans up and reaps the direct child.
+5. A response with a missing or wrong `jsonrpc` version, or with an unknown or
+   mismatched ID, cannot satisfy the pending request. The operation returns a
+   specific correlation/protocol error and still cleans up and reaps the direct
+   child.
 6. Before responding, a fake mode writes at least 4 MiB to stderr, exceeding the
    configured retained-diagnostic limit. The lifecycle still completes without
    pipe deadlock; retained diagnostics stay within the limit and report
