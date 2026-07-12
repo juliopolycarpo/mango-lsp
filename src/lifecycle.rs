@@ -273,11 +273,10 @@ impl DownstreamSession {
             self.stdin.take();
             let exit_status = self.wait_for_exit("graceful exit", self.limits.operation_timeout)?;
             if !exit_status.success() {
-                let diagnostics = self.join_workers();
                 return Err(DownstreamError::ChildExited {
                     operation: "graceful exit",
                     status: Some(exit_status),
-                    diagnostics,
+                    diagnostics: DiagnosticSummary::default(),
                 });
             }
 
@@ -334,12 +333,15 @@ impl DownstreamSession {
     ) -> Result<Vec<u8>, DownstreamError> {
         let deadline = Instant::now() + timeout;
         loop {
+            // Error paths must not join pipe workers here: the child may still
+            // be alive and holding stderr open, so joining could block past the
+            // configured bound. fail_closed() terminates and reaps first, then
+            // joins and enriches the error with the real diagnostic summary.
             if let Some(status) = self.try_reap()? {
-                let diagnostics = self.join_workers();
                 return Err(DownstreamError::ChildExited {
                     operation,
                     status: Some(status),
-                    diagnostics,
+                    diagnostics: DiagnosticSummary::default(),
                 });
             }
 
@@ -356,21 +358,19 @@ impl DownstreamSession {
                 }
                 Ok(ReaderEvent::Eof) => {
                     let status = self.try_reap()?;
-                    let diagnostics = self.join_workers();
                     return Err(DownstreamError::ChildExited {
                         operation,
                         status,
-                        diagnostics,
+                        diagnostics: DiagnosticSummary::default(),
                     });
                 }
                 Err(mpsc::RecvTimeoutError::Timeout) => continue,
                 Err(mpsc::RecvTimeoutError::Disconnected) => {
                     let status = self.try_reap()?;
-                    let diagnostics = self.join_workers();
                     return Err(DownstreamError::ChildExited {
                         operation,
                         status,
-                        diagnostics,
+                        diagnostics: DiagnosticSummary::default(),
                     });
                 }
             }
