@@ -178,7 +178,7 @@ pub fn expect_result(message: JsonRpcMessage, expected_id: &JsonRpcId) -> Result
     Ok(response.result.unwrap_or(Value::Null))
 }
 
-/// Build the minimal `initialize` request used by the lifecycle proof.
+/// Build the minimal `initialize` request used by the S002 lifecycle proof.
 #[must_use]
 pub fn initialize_request(id: JsonRpcId) -> RequestMessage {
     RequestMessage::new(
@@ -194,6 +194,84 @@ pub fn initialize_request(id: JsonRpcId) -> RequestMessage {
             "rootUri": null
         })),
     )
+}
+
+/// Parameters for the configuration-backed workspace initialize request.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceInitializeParams {
+    pub process_id: u32,
+    pub root_uri: String,
+    pub workspace_folder_name: String,
+}
+
+/// Build the S003 initialize request with workspace folders and static caps.
+#[must_use]
+pub fn workspace_initialize_request(
+    id: JsonRpcId,
+    params: &WorkspaceInitializeParams,
+) -> RequestMessage {
+    RequestMessage::new(
+        id,
+        "initialize",
+        Some(serde_json::json!({
+            "processId": params.process_id,
+            "rootUri": params.root_uri,
+            "capabilities": {
+                "workspace": {
+                    "workspaceFolders": true,
+                    "symbol": {
+                        "dynamicRegistration": false
+                    }
+                }
+            },
+            "clientInfo": {
+                "name": "mango-lsp",
+                "version": env!("CARGO_PKG_VERSION")
+            },
+            "workspaceFolders": [{
+                "uri": params.root_uri,
+                "name": params.workspace_folder_name
+            }]
+        })),
+    )
+}
+
+/// Build a `workspace/symbol` request with the validated query text.
+#[must_use]
+pub fn workspace_symbol_request(id: JsonRpcId, query: &str) -> RequestMessage {
+    RequestMessage::new(
+        id,
+        "workspace/symbol",
+        Some(serde_json::json!({ "query": query })),
+    )
+}
+
+/// Return whether initialize capabilities advertise static workspace symbols.
+#[must_use]
+pub fn supports_workspace_symbol(initialize_result: &Value) -> bool {
+    match initialize_result.pointer("/capabilities/workspaceSymbolProvider") {
+        Some(Value::Bool(value)) => *value,
+        Some(Value::Object(_)) => true,
+        _ => false,
+    }
+}
+
+/// Build a response to `workspace/workspaceFolders`.
+#[must_use]
+pub fn workspace_folders_response(
+    id: JsonRpcId,
+    root_uri: &str,
+    folder_name: &str,
+) -> ResponseMessage {
+    ResponseMessage {
+        jsonrpc: JsonRpcVersion::V2,
+        id: Some(id),
+        result: Some(serde_json::json!([{
+            "uri": root_uri,
+            "name": folder_name
+        }])),
+        error: None,
+    }
 }
 
 #[must_use]
