@@ -231,14 +231,28 @@ fn validate_server_id(id: &str, max_bytes: usize) -> Result<(), ConfigError> {
 
 fn resolve_command(command: &str, config_path: &Path) -> Result<PathBuf, ConfigError> {
     let path = Path::new(command);
+
+    // Host-absolute paths are used unchanged.
+    if path.is_absolute() {
+        return Ok(path.to_path_buf());
+    }
+
+    // Root-anchored tokens (`/usr/bin/true`, `\Windows\...`) are absolute-style
+    // command paths, not config-relative — even on Windows where `Path::is_absolute`
+    // is false without a drive letter.
+    if command.starts_with('/') || command.starts_with('\\') {
+        return Ok(path.to_path_buf());
+    }
+
     let has_separator = command.contains('/') || command.contains('\\');
-    if has_separator && path.is_relative() {
+    if has_separator {
         let config_dir = config_path.parent().ok_or_else(|| ConfigError::Invalid {
             message: "configuration path has no parent directory for relative command resolution"
                 .to_owned(),
         })?;
         Ok(config_dir.join(path))
     } else {
+        // Bare names remain OS PATH lookup tokens.
         Ok(path.to_path_buf())
     }
 }
@@ -311,20 +325,26 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
         let _guard = TempDir(root.clone());
         let path = root.join("config.toml");
-        fs::write(
-            &path,
+
+        #[cfg(windows)]
+        let absolute_command = r"C:\Windows\System32\cmd.exe";
+        #[cfg(not(windows))]
+        let absolute_command = "/usr/bin/true";
+
+        // TOML literal string so Windows backslashes are not treated as escapes.
+        let contents = format!(
             r#"
 schema_version = 1
 [server]
 id = "fixture"
-command = "/usr/bin/true"
-"#,
-        )
-        .unwrap();
+command = '{absolute_command}'
+"#
+        );
+        fs::write(&path, contents).unwrap();
 
         let config = load_server_config(&path, ConfigLimits::default()).unwrap();
         assert_eq!(config.id, "fixture");
-        assert_eq!(config.command.program, PathBuf::from("/usr/bin/true"));
+        assert_eq!(config.command.program, PathBuf::from(absolute_command));
         assert!(config.command.args.is_empty());
     }
 
