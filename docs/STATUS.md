@@ -15,7 +15,7 @@ snapshot below links its complete contract.
 | Implementation state | S003 delivered the first configuration-backed `workspace-symbols` vertical flow on a dedicated PR branch. Local focused and full gates passed; three-OS CI evidence is pending maintainer review of the open PR. |
 | Authorized stage | **None — planning checkpoint** |
 | Contract | Completed S003: [`docs/stages/S003-configuration-backed-workspace-symbols.md`](stages/S003-configuration-backed-workspace-symbols.md). No next stage is authorized. |
-| Progress | S003 implementation is complete in branch `feat/s003-workspace-symbols-vertical-flow` and awaits maintainer review (do not merge until approved). Q-009 resolved as D-016; clap `string` feature and TOML/URI deps recorded as D-017/D-018. |
+| Progress | S003 implementation is complete in [PR #6](https://github.com/juliopolycarpo/mango-lsp/pull/6) on branch `feat/s003-workspace-symbols-vertical-flow` and awaits maintainer review (do not merge until approved). Q-009 resolved as D-016; clap `string` feature and TOML/URI deps recorded as D-017/D-018. |
 | Working branch or worktree | `feat/s003-workspace-symbols-vertical-flow` (implementation PR; merge only after explicit maintainer approval) |
 | Last coherent checkpoint | Local validation complete: `vertical_flow` 12/12, `downstream_lifecycle` 12/12, full suite 46 tests, fmt/clippy/offline gates green. CI URL to be recorded when the PR Actions run finishes. |
 | Remaining work | Maintainer review and merge of the S003 PR. After merge, revise later work from vertical-flow evidence at the planning checkpoint; do not start S004 without a reviewed contract. |
