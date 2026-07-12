@@ -6,9 +6,10 @@ route and aggregate useful operations, and expose a smaller, versioned interface
 than unrestricted LSP access. MangoStudio will be its primary graphical
 consumer, but the project and its release cycle are independent.
 
-The repository produces a minimal `mango-lsp` executable. The current CLI
-exposes its bootstrap help and version contract; language-server behavior will
-arrive only through separately authorized stages.
+The repository produces a `mango-lsp` executable with bootstrap help and version
+behavior, plus an internal library that can own one direct-child LSP lifecycle
+over STDIO. A deterministic `mango-lsp-fake-server` binary exists only as test
+infrastructure and is not a product command.
 
 ## Contributor quick start
 
@@ -21,13 +22,16 @@ cargo build --locked
 cargo fmt --all -- --check
 cargo check --all-targets --locked
 cargo clippy --all-targets --locked -- -D warnings
+cargo test --all-targets --locked downstream_lifecycle -- --nocapture
 cargo test --all-targets --locked
 cargo run --locked -- --help
 cargo run --locked -- --version
 ```
 
 Builds and tests do not require a language server, credentials, or network
-access after Cargo has fetched the locked dependencies.
+access after Cargo has fetched the locked dependencies. The focused
+`downstream_lifecycle` filter exercises the S002 fake-server proof, including
+backpressure and forced-cleanup cases.
 
 ## Start here
 
