@@ -3,6 +3,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use serde_json::Value;
@@ -24,11 +25,12 @@ impl Drop for Fixture {
 }
 
 fn unique_root(label: &str) -> PathBuf {
+    static FIXTURE_SEQ: AtomicU64 = AtomicU64::new(0);
     std::env::temp_dir().join(format!(
         "mango-lsp-vf-{}-{}-{}",
         label,
         std::process::id(),
-        Instant::now().elapsed().as_nanos()
+        FIXTURE_SEQ.fetch_add(1, Ordering::Relaxed)
     ))
 }
 
@@ -245,6 +247,45 @@ command = "/no/such"
     assert_eq!(output.status.code(), Some(2), "{output:?}");
     let envelope = parse_envelope(&output.stdout);
     assert_eq!(envelope["error"]["kind"], "configuration");
+}
+
+#[test]
+fn vertical_flow_toml_parse_error_redacts_config_contents() {
+    let root = unique_root("toml-err");
+    fs::create_dir_all(&root).unwrap();
+    let workspace = root.join("workspace");
+    fs::create_dir_all(&workspace).unwrap();
+    let config = root.join("config.toml");
+    // Unterminated array on the line carrying the sentinel argument: the
+    // parse error must not echo configuration contents into either stream.
+    fs::write(
+        &config,
+        format!(
+            "schema_version = 1\n[server]\nid = \"fixture\"\ncommand = \"/usr/bin/true\"\nargs = [\"{SECRET_ARG}\"\n"
+        ),
+    )
+    .unwrap();
+    let _guard = Fixture {
+        root,
+        config: config.clone(),
+        workspace: workspace.clone(),
+    };
+    let output = Command::new(mango_lsp())
+        .args([
+            "workspace-symbols",
+            "--config",
+            config.to_str().unwrap(),
+            "--workspace",
+            workspace.to_str().unwrap(),
+            "--query",
+            "Widget",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    let envelope = parse_envelope(&output.stdout);
+    assert_eq!(envelope["error"]["kind"], "configuration");
+    assert_no_secrets(&output);
 }
 
 #[test]

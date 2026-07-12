@@ -115,16 +115,7 @@ pub fn load_server_config(
     config_path: &Path,
     limits: ConfigLimits,
 ) -> Result<ServerConfig, ConfigError> {
-    let absolute = if config_path.is_absolute() {
-        config_path.to_path_buf()
-    } else {
-        std::env::current_dir()
-            .map_err(|source| ConfigError::Io {
-                path: config_path.to_path_buf(),
-                source,
-            })?
-            .join(config_path)
-    };
+    let absolute = absolutize(config_path)?;
 
     let metadata = fs::metadata(&absolute).map_err(|source| ConfigError::Io {
         path: absolute.clone(),
@@ -151,9 +142,11 @@ pub fn load_server_config(
         });
     }
 
+    // Use the bare message, not Display: the full rendering embeds source
+    // lines, and configuration contents must never reach the output streams.
     let raw: RawConfig = toml::from_str(&text).map_err(|error| ConfigError::Parse {
         path: absolute.clone(),
-        message: error.to_string(),
+        message: error.message().to_owned(),
     })?;
 
     if raw.schema_version != 1 {
@@ -232,16 +225,25 @@ fn validate_server_id(id: &str, max_bytes: usize) -> Result<(), ConfigError> {
 fn resolve_command(command: &str, config_path: &Path) -> Result<PathBuf, ConfigError> {
     let path = Path::new(command);
 
-    // Host-absolute paths are used unchanged.
-    if path.is_absolute() {
+    // Root-anchored tokens (`/usr/bin/true`, and `\Windows\...` on Windows)
+    // are absolute-style command paths used unchanged — even on Windows where
+    // `Path::is_absolute` is false without a drive letter. On Unix a leading
+    // `\` is just a filename byte, so `has_root` correctly leaves such tokens
+    // to the separator rule below.
+    if path.has_root() {
         return Ok(path.to_path_buf());
     }
 
-    // Root-anchored tokens (`/usr/bin/true`, `\Windows\...`) are absolute-style
-    // command paths, not config-relative — even on Windows where `Path::is_absolute`
-    // is false without a drive letter.
-    if command.starts_with('/') || command.starts_with('\\') {
-        return Ok(path.to_path_buf());
+    // Drive-relative tokens (`C:tool.exe`) resolve against a per-drive current
+    // directory the CLI does not control; reject them as ambiguous.
+    #[cfg(windows)]
+    if matches!(
+        path.components().next(),
+        Some(std::path::Component::Prefix(_))
+    ) {
+        return Err(ConfigError::Invalid {
+            message: "server.command is drive-relative; use an absolute path".to_owned(),
+        });
     }
 
     let has_separator = command.contains('/') || command.contains('\\');
@@ -275,18 +277,22 @@ pub fn validate_query(query: &str) -> Result<(), ConfigError> {
     Ok(())
 }
 
+/// Make a caller-supplied path absolute relative to the current directory.
+fn absolutize(path: &Path) -> Result<PathBuf, ConfigError> {
+    if path.is_absolute() {
+        return Ok(path.to_path_buf());
+    }
+    Ok(std::env::current_dir()
+        .map_err(|source| ConfigError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?
+        .join(path))
+}
+
 /// Resolve and validate an existing workspace directory.
 pub fn resolve_workspace(workspace: &Path) -> Result<(PathBuf, String), ConfigError> {
-    let absolute = if workspace.is_absolute() {
-        workspace.to_path_buf()
-    } else {
-        std::env::current_dir()
-            .map_err(|source| ConfigError::Io {
-                path: workspace.to_path_buf(),
-                source,
-            })?
-            .join(workspace)
-    };
+    let absolute = absolutize(workspace)?;
 
     let metadata = fs::metadata(&absolute).map_err(|source| ConfigError::Io {
         path: absolute.clone(),

@@ -418,16 +418,14 @@ impl DownstreamSession {
                 "shutdown",
                 &JsonRpcMessage::Request(shutdown_request(shutdown_id.clone())),
             )?;
-            let shutdown_body =
-                self.wait_for_message("shutdown response", self.limits.operation_timeout)?;
-            expect_result(
-                parse_protocol("shutdown response", &shutdown_body)?,
+            self.wait_for_correlated_result(
+                "shutdown response",
                 &shutdown_id,
-            )
-            .map_err(|source| DownstreamError::Protocol {
-                operation: "shutdown response",
-                source,
-            })?;
+                PendingPhase::Operation,
+                params.root_uri,
+                params.workspace_folder_name,
+                &mut notifications,
+            )?;
 
             self.write_message("exit", &JsonRpcMessage::Notification(exit_notification()))?;
             self.stdin.take();
@@ -493,7 +491,14 @@ impl DownstreamSession {
         operation: &'static str,
         timeout: Duration,
     ) -> Result<Vec<u8>, DownstreamError> {
-        let deadline = Instant::now() + timeout;
+        self.wait_for_message_until(operation, Instant::now() + timeout)
+    }
+
+    fn wait_for_message_until(
+        &mut self,
+        operation: &'static str,
+        deadline: Instant,
+    ) -> Result<Vec<u8>, DownstreamError> {
         loop {
             // Error paths must not join pipe workers here: the child may still
             // be alive and holding stderr open, so joining could block past the
@@ -553,47 +558,7 @@ impl DownstreamSession {
     ) -> Result<Value, DownstreamError> {
         let deadline = Instant::now() + self.limits.operation_timeout;
         loop {
-            if let Some(status) = self.try_reap()? {
-                return Err(DownstreamError::ChildExited {
-                    operation,
-                    status: Some(status),
-                    diagnostics: DiagnosticSummary::default(),
-                });
-            }
-
-            let remaining = deadline.saturating_duration_since(Instant::now());
-            if remaining.is_zero() {
-                return Err(DownstreamError::Timeout {
-                    operation,
-                    diagnostics: DiagnosticSummary::default(),
-                });
-            }
-
-            let slice = remaining.min(Duration::from_millis(50));
-            let body = match self.reader_rx.recv_timeout(slice) {
-                Ok(ReaderEvent::Message(body)) => body,
-                Ok(ReaderEvent::Failed(source)) => {
-                    return Err(DownstreamError::Frame { operation, source });
-                }
-                Ok(ReaderEvent::Eof) => {
-                    let status = self.try_reap()?;
-                    return Err(DownstreamError::ChildExited {
-                        operation,
-                        status,
-                        diagnostics: DiagnosticSummary::default(),
-                    });
-                }
-                Err(mpsc::RecvTimeoutError::Timeout) => continue,
-                Err(mpsc::RecvTimeoutError::Disconnected) => {
-                    let status = self.try_reap()?;
-                    return Err(DownstreamError::ChildExited {
-                        operation,
-                        status,
-                        diagnostics: DiagnosticSummary::default(),
-                    });
-                }
-            };
-
+            let body = self.wait_for_message_until(operation, deadline)?;
             let message = parse_protocol(operation, &body)?;
             match message {
                 JsonRpcMessage::Response(_) => {
