@@ -11,21 +11,24 @@ snapshot below links its complete contract.
 
 | Field | Value |
 | --- | --- |
-| Phase | Foundation |
-| Implementation state | S002 delivered a bounded direct-child STDIO/LSP lifecycle with framing, correlation, stderr draining, forced cleanup, and a deterministic fake server. |
-| Authorized stage | **None — planning checkpoint** |
-| Contract | Completed S002 remains at [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md). S003 is not authorized. |
-| Progress | S002 is complete in [PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3). Local mandatory gates passed under Rust 1.97.0, and [Actions run 29193519305](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29193519305) passed all quality and three-OS lifecycle gates. |
-| Working branch or worktree | `main` after PR #3 squash-merge; no implementation branch is authorized. |
-| Last coherent checkpoint | S002 implementation and cross-platform CI evidence are complete; Q-005/Q-006 are resolved as D-012/D-013. |
-| Remaining work | Draft, review, and explicitly authorize a complete S003 contract before any configuration-backed vertical work. |
-| Validation evidence | [Actions run 29193519305](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29193519305): quality job passed with a 10-minute timeout; test jobs passed with 20-minute timeouts; 11 focused `downstream_lifecycle_*` tests passed on Ubuntu, macOS, and Windows, including stderr backpressure and both forced-cleanup cases. S002 guarantees direct-child cleanup only; descendant process-tree and real-server behavior are unverified. |
-| Blockers | None. Q-011 remains required only before public distribution. |
+| Phase | First vertical flow — S003 authorized |
+| Implementation state | S002 delivered and revised a bounded direct-child STDIO/LSP lifecycle with framing, correlation, stderr draining, forced cleanup, and a deterministic fake server. The S003 contract has been maintainer-reviewed, refined, and accepted; S003 implementation is authorized but has not started. |
+| Authorized stage | **S003 — configuration-backed workspace symbol flow** |
+| Contract | Authorized S003: [`docs/stages/S003-configuration-backed-workspace-symbols.md`](stages/S003-configuration-backed-workspace-symbols.md), accepted by maintainer review on 2026-07-12 with Q-004/Q-007 resolved as D-014/D-015 in `docs/PROJECT.md`. Completed S002 remains at [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md). |
+| Progress | S002 was delivered in [PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3) and its failure paths were corrected in [PR #4](https://github.com/juliopolycarpo/mango-lsp/pull/4) at `9f5692e`. The accepted S003 contract specifies an explicit one-server TOML configuration, a `workspace-symbols` CLI operation, a normalized JSON result, redacted JSON Lines events, and deterministic three-OS evidence. Review refinements closed three public-contract gaps (see the active-stage working record); implementation has not started. |
+| Working branch or worktree | None yet for implementation. S003 work must begin on a writable non-protected implementation branch per the contract; this authorization was recorded from the documentation branch `docs/s003-configuration-vertical-flow`. |
+| Last coherent checkpoint | Revised S002 behavior is on `main` with current cross-platform evidence; the accepted S003 contract, D-014/D-015, and this authorization transition are recoverable from this repository. |
+| Remaining work | Implement S003 per its contract on a writable branch: configuration boundary, downstream one-operation session, normalized envelope and event writers, fake-server modes, `vertical_flow` tests, and the three-OS CI gate. Resolve Q-009 from implementation evidence. |
+| Validation evidence | Revised S002 [Actions run 29200218085](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29200218085) passed format/lint plus focused and full tests on Ubuntu, macOS, and Windows. Job logs show 12/12 focused `downstream_lifecycle_*` tests on every OS, including the PR #4 diagnostic-preservation regression; the complete suite passed 24 tests per OS. S002 guarantees direct-child cleanup only; descendant process-tree and real-server behavior remain unverified. |
+| Blockers | None. Q-009 resolves during S003 implementation; Q-011 remains required only before public distribution. |
 
 S002's completion dependency for S003 is satisfied by the squash-merge of
-[PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3). S003 is
-dependency-unblocked but still requires a complete contract, review, and explicit
-authorization before implementation.
+[PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3) and the follow-up
+failure-path correction in [PR #4](https://github.com/juliopolycarpo/mango-lsp/pull/4).
+S003's authorization prerequisites were satisfied on 2026-07-12: the contract
+was maintainer-reviewed and refined, Q-004 and Q-007 were resolved as accepted
+decisions D-014 and D-015 in `docs/PROJECT.md`, and this file now names S003 as
+the authorized stage.
 
 ## Near-term stage sequence
 
@@ -37,7 +40,7 @@ the first vertical flow rather than expanded into a speculative backlog.
 | P000 | Establish product, decision, state, stage, and handoff sources of truth. Gate: a clean session can identify authorized work and its objective checks without chat history. | None | Complete in the initial repository structure |
 | S001 | Establish a reproducible Rust binary whose help, version, invalid-input behavior, tests, lint, formatting, and cross-platform CI are observable. | P000 | Complete in [PR #1](https://github.com/juliopolycarpo/mango-lsp/pull/1), squash commit `40c8d0f` |
 | S002 | Prove a bounded downstream STDIO/LSP lifecycle with a deterministic fake: spawn, frame one interaction, correlate it, drain diagnostics, and shut down without orphaning the child. Exact API and crate boundaries remain open. | S001 | Complete in [PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3). Contract: [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md) |
-| S003 | Complete the first configuration-backed vertical flow: CLI startup, minimal declarative configuration, supervised server launch, one useful LSP interaction, structured result and logs, and controlled shutdown. | S002 and decisions needed from Q-004, Q-007, and Q-009 | S002 dependency satisfied; dependency-unblocked, planned outline; **not authorized** |
+| S003 | Complete the first configuration-backed vertical flow: explicit one-server TOML, supervised launch, one `workspace/symbol` interaction, normalized JSON result, redacted JSON Lines events, and controlled shutdown. | Revised S002; Q-004/Q-007 before authorization; Q-009 during implementation | **Authorized** — [contract](stages/S003-configuration-backed-workspace-symbols.md) accepted 2026-07-12 with Q-004/Q-007 resolved as D-014/D-015; implementation not started |
 | Checkpoint | Review vertical-flow evidence before specifying multi-server routing, public schema generation, resilience hardening, packaging, or releases. | S003 | Not authorized |
 
 ### Gate policy
@@ -56,16 +59,16 @@ the first vertical flow rather than expanded into a speculative backlog.
 
 | Field | Current record |
 | --- | --- |
-| Stage | None — planning checkpoint; S002 complete |
-| Owner/session | No active implementation stage |
-| Branch | None |
-| Last completed unit | S002 framing, protocol, lifecycle session, fake server, process-level `downstream_lifecycle_*` tests, D-012/D-013, and three-OS CI evidence |
-| Next action | Plan and review a complete S003 contract. Do not implement S003 until it is explicitly authorized. |
-| Changed paths | `src/lib.rs`, `src/frame.rs`, `src/protocol.rs`, `src/diagnostics.rs`, `src/lifecycle.rs`, `src/bin/mango_lsp_fake_server.rs`, `tests/downstream_lifecycle.rs`, `Cargo.toml`, `Cargo.lock`, `.github/workflows/ci.yml`, `README.md`, `docs/PROJECT.md`, `docs/STATUS.md` |
-| Checks run | Local: `cargo test --all-targets --locked downstream_lifecycle -- --nocapture` → 11 passed; unit frame/protocol tests → 9 passed; full `cargo test --all-targets --locked` → 23 passed; fmt/check/clippy/offline and CLI gates passed. CI: [run 29193519305](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29193519305) passed format/lint and focused plus full tests; focused `downstream_lifecycle_*` tests → Ubuntu 11 passed, macOS 11 passed, Windows 11 passed. Workflow bounds: 10 minutes for quality, 20 minutes for each test job. |
+| Stage | S003 — authorized 2026-07-12; implementation not started |
+| Owner/session | Unassigned; the next implementation session owns this record. |
+| Branch | None yet; implementation must begin on a writable non-protected S003 branch. The review and authorization records were made on `docs/s003-configuration-vertical-flow`. |
+| Last completed unit | Maintainer review and acceptance of the S003 contract. Review refinements closed three public-contract gaps before freezing: (1) exit statuses now cover every bounded error kind (`spawn` and `unsupported_capability` explicitly exit 1); (2) an invalid `--query` is a `query` boundary rejection with its own bounded error kind and exit 2; (3) server ID validity is defined (non-empty, bounded length, ASCII lowercase letters, digits, `-`, `_`). Q-004/Q-007 recorded as D-014/D-015. |
+| Next action | Begin S003 implementation on a writable branch per the contract: strict configuration/public-envelope boundary first, then the downstream one-operation session, fake-server modes, and `vertical_flow` process tests. Resolve Q-009 with implementation evidence. |
+| Changed paths | Authorization records only: `docs/stages/S003-configuration-backed-workspace-symbols.md` (review refinements), `docs/PROJECT.md` (D-014/D-015, Q-004/Q-007 closed), and `docs/STATUS.md`. No S003 implementation paths are active. |
+| Checks run | S003 authorization records: `git diff --check` and linked-file existence checks passed; contract cross-checked against the repository (commits `7720278`/`9f5692e` on `main`, D-001–D-013 and R-001–R-009 present, CI matrix with 10/20-minute bounds, pinned Rust 1.97.0, S002 limits in `src/frame.rs`/`src/lifecycle.rs`). Prior planning-artifact checks and revised S002 CI evidence ([run 29200218085](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29200218085): 12/12 focused lifecycle tests and the 24-test complete suite on Ubuntu, macOS, and Windows) remain current; no Rust source changed in this transition. |
 | Failed or unavailable checks | None. |
-| Open implementation decisions | Q-005 → D-012; Q-006 → D-013. Q-003 remains open until release planning. |
-| Resume notes | Default bounds: header 64 KiB, body 16 MiB, stderr retention 64 KiB, operation timeout 5s, force-shutdown 2s (tests inject tighter limits). Fake binary `mango-lsp-fake-server` is test infrastructure only. Direct-child cleanup only. |
+| Open implementation decisions | Q-009 resolves from S003 implementation evidence. Q-003 remains open until release planning. |
+| Resume notes | Accepted S003 specifies `workspace-symbols --config <FILE> --workspace <DIR> --query <TEXT>`, explicit version 1 one-server TOML, one JSON stdout envelope with ten bounded error kinds (including `query`), and redacted JSON Lines stderr events. Existing defaults remain: header 64 KiB, body 16 MiB, stderr retention 64 KiB, operation timeout 5s, force-shutdown 2s. Fake binary is test infrastructure only; cleanup remains direct-child only. |
 
 When a stage finishes, replace this record with its outcome and validation
 evidence, move it into the history table, and leave the next active record empty
@@ -77,7 +80,7 @@ unless another complete contract is authorized.
 | --- | --- | --- | --- |
 | P000 | Established the minimal planning and continuity system and specified S001. | Repository documentation and its initial signed commit. | The bootstrap prompt was intentionally retired after its durable requirements were incorporated. |
 | S001 | Established the root Rust 2024 application, deterministic bootstrap CLI behavior, real-binary integration tests, pinned toolchain/quality policy, and three-OS CI baseline. | All mandatory local commands passed with Rust 1.97.0; offline build/test passed; invalid option exited 2 with a stderr diagnostic; [Actions run 29190660631](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29190660631) passed format/lint and Linux, macOS, and Windows check/build/test jobs, with 3 CLI tests executed on each OS. | None. An independent review evidence-timestamp finding was resolved by rerunning the complete final-tree validation suite. |
-| S002 | Proved bounded direct-child STDIO LSP lifecycle: project-owned framing, minimal JSON-RPC types via serde_json, std process/thread supervision, concurrent stderr drain with truncation, forced cleanup/reap, and hostile fake-server acceptance tests. | Local: 11 `downstream_lifecycle_*` tests, 9 codec/protocol unit tests, 3 CLI tests (23 total); fmt/check/clippy/offline gates passed on Linux with Rust 1.97.0. CI: [Actions run 29193519305](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29193519305) passed the 10-minute format/lint job and 20-minute test jobs; focused lifecycle suite passed 11/11 on Ubuntu, 11/11 on macOS, and 11/11 on Windows, including stderr backpressure and forced cleanup on stalled initialize and hung shutdown. Decisions D-012 and D-013. | Shipped a separate `mango-lsp-fake-server` test binary (not a product CLI subcommand). Packaging must exclude it before release (O-001). |
+| S002 | Proved bounded direct-child STDIO LSP lifecycle: project-owned framing, minimal JSON-RPC types via serde_json, std process/thread supervision, concurrent stderr drain with truncation, forced cleanup/reap, and hostile fake-server acceptance tests. PR #4 subsequently corrected failure paths to preserve child diagnostics and defer pipe-worker joins until after termination/reap. | Original local and [three-OS CI evidence](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29193519305): 11 lifecycle, 9 unit, and 3 CLI tests (23 total), plus fmt/check/clippy/offline gates. Revised `main` at `9f5692e`: [Actions run 29200218085](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29200218085) passed quality and 12/12 focused lifecycle tests plus the 24-test complete suite on Ubuntu, macOS, and Windows, including diagnostic preservation, backpressure, and forced cleanup. Decisions D-012 and D-013. | Shipped a separate `mango-lsp-fake-server` test binary (not a product CLI subcommand). Packaging must exclude it before release (O-001). Descendant-inherited pipes remain outside the direct-child guarantee. |
 
 ## Discovery and opportunity backlog
 
@@ -92,8 +95,10 @@ An entry records an opportunity; it does not authorize implementation. Use IDs
 
 ## Current deviations and blockers
 
-None. S002 local and three-OS CI evidence is complete. Q-011 remains
-deliberately open until public distribution.
+None. Revised S002 three-OS CI evidence is complete. S003 is explicitly
+authorized with its contract accepted and Q-004/Q-007 resolved as D-014/D-015;
+implementation has not started. Q-011 remains deliberately open until public
+distribution.
 
 ## State transition checklist
 
