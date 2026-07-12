@@ -12,20 +12,19 @@ snapshot below links its complete contract.
 | Field | Value |
 | --- | --- |
 | Phase | Foundation |
-| Implementation state | S001 delivered a reproducible, tested Rust CLI baseline. |
-| Authorized stage | **S002 — Bounded downstream STDIO lifecycle** |
-| Contract | [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md), reviewed and accepted by the maintainer on 2026-07-12; completed S001 remains at [`docs/stages/S001-rust-cli-foundation.md`](stages/S001-rust-cli-foundation.md). |
-| Progress | S001 was squash-merged through [PR #1](https://github.com/juliopolycarpo/mango-lsp/pull/1) as `40c8d0f`; the S002 contract passed review (preconditions verified against `main` and the LSP 3.18 base protocol) and is authorized. Implementation has not started. |
-| Working branch or worktree | No implementation branch yet; S002 work must begin on a writable stage branch per the contract preconditions. |
-| Last coherent checkpoint | S001 is on `main`, and the S002 downstream-lifecycle contract is reviewed, accepted, and authorized in this file. |
-| Remaining work | Execute the S002 contract: implement the bounded downstream lifecycle, resolve Q-005 and Q-006, and record evidence here. |
-| Validation evidence | Final-tree mandatory gates and a separate offline build/test passed locally on Linux with Rust 1.97.0. Three real-binary CLI tests passed locally and in each OS job in [Actions run 29190660631](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29190660631); logs were inspected and showed 3 passed, 0 failed, and 0 ignored on Linux, macOS, and Windows. Direct invalid-input smoke exited 2 with a useful stderr diagnostic. |
-| Blockers | None. Q-005 and Q-006 are intentionally resolved from S002 implementation evidence; Q-011 remains required only before public distribution. |
+| Implementation state | S002 delivered a bounded direct-child STDIO/LSP lifecycle with framing, correlation, stderr draining, forced cleanup, and a deterministic fake server. |
+| Authorized stage | **None — planning checkpoint** |
+| Contract | Completed S002 remains at [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md). S003 is not authorized. |
+| Progress | S002 is implemented on `feat/s002-downstream-stdio-lifecycle`. Local mandatory gates passed under Rust 1.97.0. CI evidence is recorded when the implementation PR completes three-OS validation. |
+| Working branch or worktree | `feat/s002-downstream-stdio-lifecycle` |
+| Last coherent checkpoint | Local focused and full test suites pass; Q-005/Q-006 resolved as D-012/D-013. |
+| Remaining work | Maintainer review and squash-merge of the S002 PR; then draft/review/authorize a complete S003 contract before any configuration-backed vertical work. |
+| Validation evidence | See active-stage working record and stage history. S002 guarantees direct-child cleanup only; descendant process-tree and real-server behavior are unverified. |
+| Blockers | None for S002 local proof. Public CI run URL and per-OS lifecycle counts are filled during PR babysitting. Q-011 remains required only before public distribution. |
 
-S002 is the authorized stage. Its contract was reviewed against the merged S001
-baseline, the current decision registry, and the LSP 3.18 base protocol, then
-explicitly accepted by the maintainer on 2026-07-12. Implementation must follow
-the contract's preconditions, beginning with a writable S002 branch.
+S002's dependency for S003 is satisfied once this stage is squash-merged. S003
+still requires a complete contract, review, and explicit authorization before
+implementation.
 
 ## Near-term stage sequence
 
@@ -36,8 +35,8 @@ the first vertical flow rather than expanded into a speculative backlog.
 | --- | --- | --- | --- |
 | P000 | Establish product, decision, state, stage, and handoff sources of truth. Gate: a clean session can identify authorized work and its objective checks without chat history. | None | Complete in the initial repository structure |
 | S001 | Establish a reproducible Rust binary whose help, version, invalid-input behavior, tests, lint, formatting, and cross-platform CI are observable. | P000 | Complete in [PR #1](https://github.com/juliopolycarpo/mango-lsp/pull/1), squash commit `40c8d0f` |
-| S002 | Prove a bounded downstream STDIO/LSP lifecycle with a deterministic fake: spawn, frame one interaction, correlate it, drain diagnostics, and shut down without orphaning the child. Exact API and crate boundaries remain open. | S001 | [Contract](stages/S002-downstream-stdio-lifecycle.md) accepted and authorized 2026-07-12; implementation not started |
-| S003 | Complete the first configuration-backed vertical flow: CLI startup, minimal declarative configuration, supervised server launch, one useful LSP interaction, structured result and logs, and controlled shutdown. | S002 and decisions needed from Q-004, Q-007, and Q-009 | Planned outline; not authorized |
+| S002 | Prove a bounded downstream STDIO/LSP lifecycle with a deterministic fake: spawn, frame one interaction, correlate it, drain diagnostics, and shut down without orphaning the child. Exact API and crate boundaries remain open. | S001 | Implemented; awaiting squash-merge. Contract: [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md) |
+| S003 | Complete the first configuration-backed vertical flow: CLI startup, minimal declarative configuration, supervised server launch, one useful LSP interaction, structured result and logs, and controlled shutdown. | S002 and decisions needed from Q-004, Q-007, and Q-009 | Dependency unblocked after S002 merge; planned outline; **not authorized** |
 | Checkpoint | Review vertical-flow evidence before specifying multi-server routing, public schema generation, resilience hardening, packaging, or releases. | S003 | Not authorized |
 
 ### Gate policy
@@ -46,29 +45,26 @@ the first vertical flow rather than expanded into a speculative backlog.
 - A stage is complete only when its behavioral acceptance criteria and mandatory
   validations have objective evidence and its state changes are included in the
   same PR.
-- Completion does not authorize the next row. After S001, set the authorized
+- Completion does not authorize the next row. After S002, set the authorized
   stage to `None — planning checkpoint` unless a maintainer has reviewed and
-  authorized a complete S002 contract.
+  authorized a complete S003 contract.
 - If evidence invalidates the sequence, update this table and explain the
   deviation; do not force work through a stale plan.
 
 ## Active-stage working record
 
-Update these fields whenever work must survive a handoff or context reset. Keep
-them factual and point to commits, paths, or exact command results where useful.
-
 | Field | Current record |
 | --- | --- |
-| Stage | S002 — authorized; implementation not started |
-| Owner/session | — |
-| Branch | — (a writable S002 stage branch must be created first) |
-| Last completed unit | S001 on `main` at `40c8d0f`; see stage history and PR #1 |
-| Next action | Begin implementing [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md), starting with its minimum context and precondition checks. |
-| Changed paths | None yet for S002 |
-| Checks run | None yet for S002; completed S001 evidence is recorded above and in stage history. |
-| Failed or unavailable checks | None |
-| Open implementation decisions | Q-005 and Q-006 must be resolved with evidence during S002; Q-003 remains intentionally open until release planning. |
-| Resume notes | S002 is authorized but not started. A clean session should read the contract in full, verify its preconditions, and create the implementation branch before editing code. |
+| Stage | S002 — implementation complete locally; authorized stage cleared to planning checkpoint |
+| Owner/session | S002 implementation session on `feat/s002-downstream-stdio-lifecycle` |
+| Branch | `feat/s002-downstream-stdio-lifecycle` |
+| Last completed unit | Framing, protocol, lifecycle session, fake server, process-level `downstream_lifecycle_*` tests, D-012/D-013, CI timeouts and focused lifecycle step |
+| Next action | Open/babysit the S002 PR through green Linux/macOS/Windows CI, then maintainer squash-merge. Do not start S003 until a complete contract is authorized. |
+| Changed paths | `src/lib.rs`, `src/frame.rs`, `src/protocol.rs`, `src/diagnostics.rs`, `src/lifecycle.rs`, `src/bin/mango_lsp_fake_server.rs`, `tests/downstream_lifecycle.rs`, `Cargo.toml`, `Cargo.lock`, `.github/workflows/ci.yml`, `README.md`, `docs/PROJECT.md`, `docs/STATUS.md` |
+| Checks run | `cargo test --all-targets --locked downstream_lifecycle -- --nocapture` → 11 passed; unit frame/protocol tests → 9 passed; full `cargo test --all-targets --locked` → 23 passed; `cargo fmt --check`, `cargo check --all-targets --locked`, `cargo clippy --all-targets --locked -- -D warnings` passed; `cargo build --locked --offline` and `cargo test --all-targets --locked --offline` passed; `cargo run --locked --bin mango-lsp -- --help`/`--version` ok; unknown option exits 2 with stderr diagnostic. |
+| Failed or unavailable checks | Live three-OS CI counts pending PR run. |
+| Open implementation decisions | Q-005 → D-012; Q-006 → D-013. Q-003 remains open until release planning. |
+| Resume notes | Default bounds: header 64 KiB, body 16 MiB, stderr retention 64 KiB, operation timeout 5s, force-shutdown 2s (tests inject tighter limits). Fake binary `mango-lsp-fake-server` is test infrastructure only. Direct-child cleanup only. |
 
 When a stage finishes, replace this record with its outcome and validation
 evidence, move it into the history table, and leave the next active record empty
@@ -80,6 +76,7 @@ unless another complete contract is authorized.
 | --- | --- | --- | --- |
 | P000 | Established the minimal planning and continuity system and specified S001. | Repository documentation and its initial signed commit. | The bootstrap prompt was intentionally retired after its durable requirements were incorporated. |
 | S001 | Established the root Rust 2024 application, deterministic bootstrap CLI behavior, real-binary integration tests, pinned toolchain/quality policy, and three-OS CI baseline. | All mandatory local commands passed with Rust 1.97.0; offline build/test passed; invalid option exited 2 with a stderr diagnostic; [Actions run 29190660631](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29190660631) passed format/lint and Linux, macOS, and Windows check/build/test jobs, with 3 CLI tests executed on each OS. | None. An independent review evidence-timestamp finding was resolved by rerunning the complete final-tree validation suite. |
+| S002 | Proved bounded direct-child STDIO LSP lifecycle: project-owned framing, minimal JSON-RPC types via serde_json, std process/thread supervision, concurrent stderr drain with truncation, forced cleanup/reap, and hostile fake-server acceptance tests. | Local: 11 `downstream_lifecycle_*` tests, 9 codec/protocol unit tests, 3 CLI tests (23 total); fmt/check/clippy/offline gates passed on Linux with Rust 1.97.0. Decisions D-012 and D-013. CI URL and per-OS counts recorded at merge. | Shipped a separate `mango-lsp-fake-server` test binary (not a product CLI subcommand). Packaging must exclude it before release (O-001). |
 
 ## Discovery and opportunity backlog
 
@@ -89,16 +86,13 @@ An entry records an opportunity; it does not authorize implementation. Use IDs
 
 | ID | Discovery or opportunity | Value and rationale | Source | Evaluate at | State |
 | --- | --- | --- | --- | --- | --- |
-| _None_ | No deferred implementation opportunities have been recorded. | — | P000 | — | — |
-
-Remove the `_None_` row when adding the first real entry. Resolve an entry by
-linking the decision, stage, issue, or reason for rejection; do not silently
-delete it.
+| O-001 | Exclude `mango-lsp-fake-server` from release packaging and `cargo install` artifacts. | Keeps the fake out of distributed product surfaces while preserving the normal `cargo test --all-targets` build. | S002 | Release packaging / Q-011 | Open |
+| O-002 | Consider feature-gating the fake binary once packaging exists. | Stronger guarantee than documentation alone that the fixture never ships. | S002 | Release packaging | Open |
 
 ## Current deviations and blockers
 
-None. Q-011 remains deliberately open until public distribution and does not
-block review or execution of S002 while the package remains unpublished.
+None for the local S002 proof. Three-OS CI evidence is pending the implementation
+PR. Q-011 remains deliberately open until public distribution.
 
 ## State transition checklist
 

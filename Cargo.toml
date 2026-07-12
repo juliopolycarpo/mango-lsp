@@ -6,6 +6,7 @@ rust-version = "1.97.0"
 description = "A CLI-first supervisor and agent-oriented gateway for language servers"
 repository = "https://github.com/juliopolycarpo/mango-lsp"
 publish = false
+default-run = "mango-lsp"
 
 [dependencies]
 clap = { version = "4.6.1", default-features = false, features = [
@@ -14,6 +15,22 @@ clap = { version = "4.6.1", default-features = false, features = [
     "std",
     "usage",
 ] }
+serde = { version = "1.0.219", default-features = false, features = [
+    "derive",
+    "std",
+] }
+serde_json = { version = "1.0.140", default-features = false, features = [
+    "std",
+] }
+
+[[bin]]
+name = "mango-lsp"
+path = "src/main.rs"
+
+[[bin]]
+name = "mango-lsp-fake-server"
+path = "src/bin/mango_lsp_fake_server.rs"
+doc = false
 
 [lints.rust]
 unsafe_code = "forbid"
