@@ -6,15 +6,35 @@ route and aggregate useful operations, and expose a smaller, versioned interface
 than unrestricted LSP access. MangoStudio will be its primary graphical
 consumer, but the project and its release cycle are independent.
 
-There is no Rust implementation yet. The repository currently contains the
-planning and continuity structure that governs the first implementation stage.
+The repository produces a minimal `mango-lsp` executable. The current CLI
+exposes its bootstrap help and version contract; language-server behavior will
+arrive only through separately authorized stages.
+
+## Contributor quick start
+
+Install [rustup](https://rustup.rs/) and clone the repository. The checked-in
+toolchain file selects Rust 1.97.0 and installs the required formatter and
+linter components automatically.
+
+```console
+cargo build --locked
+cargo fmt --all -- --check
+cargo check --all-targets --locked
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --all-targets --locked
+cargo run --locked -- --help
+cargo run --locked -- --version
+```
+
+Builds and tests do not require a language server, credentials, or network
+access after Cargo has fetched the locked dependencies.
 
 ## Start here
 
 A new implementation session should read, in order:
 
 1. [`AGENTS.md`](AGENTS.md) for repository working rules.
-2. [`docs/STATUS.md`](docs/STATUS.md) for the only currently authorized stage
+2. [`docs/STATUS.md`](docs/STATUS.md) for the currently authorized stage, if any,
    and its live progress.
 3. The stage contract linked from `docs/STATUS.md`.
 4. Only the sections of [`docs/PROJECT.md`](docs/PROJECT.md) referenced by the

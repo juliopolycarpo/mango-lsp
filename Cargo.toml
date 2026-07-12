@@ -1,0 +1,22 @@
+[package]
+name = "mango-lsp"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.0"
+description = "A CLI-first supervisor and agent-oriented gateway for language servers"
+repository = "https://github.com/juliopolycarpo/mango-lsp"
+publish = false
+
+[dependencies]
+clap = { version = "4.6.1", default-features = false, features = [
+    "error-context",
+    "help",
+    "std",
+    "usage",
+] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"

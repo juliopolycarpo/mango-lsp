@@ -12,14 +12,14 @@ snapshot below links its complete contract.
 | Field | Value |
 | --- | --- |
 | Phase | Foundation |
-| Implementation state | No Rust project or product behavior exists. |
+| Implementation state | S001 Rust CLI baseline implemented locally; live cross-platform CI is pending. |
 | Authorized stage | **S001 — Rust CLI foundation** |
 | Contract | [`docs/stages/S001-rust-cli-foundation.md`](stages/S001-rust-cli-foundation.md) |
-| Progress | Authorized; not started |
-| Working branch or worktree | None |
-| Last coherent checkpoint | The planning and continuity structure is established. |
-| Remaining work | Execute S001 exactly as contracted. |
-| Validation evidence | Documentation validation from the initial structure only; S001 has no implementation evidence. |
+| Progress | Implementation, local validation, and independent review complete; live CI pending |
+| Working branch or worktree | `feat/s001-rust-cli-foundation` |
+| Last coherent checkpoint | The binary, process-level tests, toolchain policy, CI workflow, and contributor documentation pass all mandatory local gates. |
+| Remaining work | Open the PR, verify Linux/macOS/Windows CI logs, then record the completion transition. |
+| Validation evidence | Final-tree mandatory gates and a separate offline build/test passed on Linux with Rust 1.97.0; 3 process-level CLI tests passed. Direct invalid-input smoke exited 2 with a useful stderr diagnostic. Independent review found no implementation defect after its evidence-timestamp finding was reconciled by a full rerun. Live cross-platform CI is not yet verified. |
 | Blockers | None. Q-011 (license) must be resolved before public distribution, not before S001. |
 
 The next implementation session may execute S001. It must not begin S002.
@@ -57,15 +57,15 @@ them factual and point to commits, paths, or exact command results where useful.
 | Field | Current record |
 | --- | --- |
 | Stage | S001 |
-| Owner/session | Unassigned |
-| Branch | Not started |
-| Last completed unit | Stage contract authored |
-| Next action | Create a stage branch and inspect the current Rust/toolchain environment. |
-| Changed paths | None for S001 |
-| Checks run | None for S001 |
-| Failed or unavailable checks | None |
-| Open implementation decisions | Q-001 and Q-002 |
-| Resume notes | Read the S001 contract; no implementation exists to recover. |
+| Owner/session | Codex implementation session, 2026-07-12 |
+| Branch | `feat/s001-rust-cli-foundation` |
+| Last completed unit | S001 implementation and all mandatory local validation |
+| Next action | Commit and open the PR, then inspect every live CI matrix job before completing the stage record. |
+| Changed paths | `Cargo.toml`, `Cargo.lock`, toolchain/format/lint policy, `src/main.rs`, `tests/cli.rs`, `.github/workflows/ci.yml`, `.gitignore`, `README.md`, `docs/PROJECT.md`, and this record |
+| Checks run | Final tree: `cargo metadata --no-deps --format-version 1`; `cargo fmt --all -- --check`; `cargo check --all-targets --locked`; `cargo clippy --all-targets --locked -- -D warnings`; `cargo test --all-targets --locked` (3 passed); `cargo build --locked`; help/version runs; invalid option smoke (exit 2). Separate `--offline` build and test also passed. |
+| Failed or unavailable checks | Initial check/Clippy/test run exposed and then resolved test error E0382. Live GitHub CI has not run yet. |
+| Open implementation decisions | None; Q-001 and Q-002 resolved by D-010 and D-011. Q-003 remains intentionally open until release planning. |
+| Resume notes | Local work is coherent, validated, and independently reviewed. Do not claim S001 complete until the PR's Linux, macOS, and Windows jobs pass and logs confirm tests ran. |
 
 When a stage finishes, replace this record with its outcome and validation
 evidence, move it into the history table, and leave the next active record empty
