@@ -79,7 +79,8 @@ daemon transport, Rust library API, multi-server policy, or generated client.
 
 - A `workspace-symbols` subcommand with required `--config`, `--workspace`, and
   `--query` options. The query must be valid UTF-8, non-empty, and bounded before
-  it is sent to a child.
+  it is sent to a child; a violation is a `query` boundary rejection with no
+  child launched.
 - This minimal TOML configuration schema:
 
   ```toml
@@ -95,6 +96,10 @@ daemon transport, Rust library API, multi-server policy, or generated client.
   required. Unknown fields, duplicate fields, an unsupported schema version,
   an invalid server ID, an empty command, excessive file/string/collection
   sizes, and malformed TOML are errors. Empty literal arguments remain valid.
+  A server ID is valid only when it is non-empty, within its documented length
+  bound, and composed of ASCII lowercase letters, digits, `-`, or `_`; the ID
+  is echoed into the result envelope and events, so its alphabet stays
+  conservative.
 - Explicit configuration selection only. S003 performs no filename search,
   parent-directory walk, environment-variable override, layer merge, or
   fallback. Relative `--config` and `--workspace` values are resolved from the
@@ -168,16 +173,18 @@ daemon transport, Rust library API, multi-server policy, or generated client.
   A failure uses `status: "error"`, `result: null`, and an error object with a
   bounded stable `kind`, a useful human-readable `message`, and `cleanup` set to
   `not_required`, `completed`, or `failed`. Error kinds are exactly
-  `configuration`, `workspace`, `spawn`, `unsupported_capability`, `protocol`,
-  `downstream`, `timeout`, `cleanup`, or `output`. `server` is null when no valid
+  `configuration`, `workspace`, `query`, `spawn`, `unsupported_capability`,
+  `protocol`, `downstream`, `timeout`, `cleanup`, or `output`. `server` is null when no valid
   server ID was available. No raw JSON-RPC object appears in this envelope.
   Required version 1 fields and their meanings are stable; additive fields may
   be introduced only when consumers can safely ignore them. A post-spawn error
   envelope is not emitted until its cleanup attempt finishes, so `cleanup`
   reports observed state rather than intent.
 - Exit status 0 only after a successful result and reaped child; status 2 for a
-  parsed invocation rejected at the CLI/configuration/workspace boundary; and
-  status 1 for downstream, protocol, timeout, output, or cleanup failure.
+  parsed invocation rejected at the query/configuration/workspace boundary
+  before any child launch; and status 1 for spawn, unsupported-capability,
+  downstream, protocol, timeout, output, or cleanup failure, so every bounded
+  error kind has exactly one documented exit status.
   Clap-owned help, version, and syntax errors retain their existing behavior and
   are not wrapped in the JSON envelope.
 - Version 1 JSON Lines events on stderr. Every line is one compact JSON object
@@ -402,11 +409,11 @@ The coherent change must provide:
    empty command, or exceeded configured bound fails before any child launch.
    An empty literal argument remains valid. No default file, parent path, or
    environment variable is consulted.
-3. After successful Clap parsing, every configuration or workspace rejection
-   emits exactly one valid version 1 error envelope on stdout, one or more valid
-   redacted JSON Lines events on stderr, and exit status 2. A sentinel placed in
-   command arguments or unrelated environment values is absent from both
-   streams.
+3. After successful Clap parsing, every query, configuration, or workspace
+   rejection emits exactly one valid version 1 error envelope on stdout, one or
+   more valid redacted JSON Lines events on stderr, and exit status 2. A
+   sentinel placed in command arguments or unrelated environment values is
+   absent from both streams.
 4. The selected command is spawned directly without a shell. Literal arguments
    arrive unchanged, the child's current directory is the canonical workspace,
    config-relative executable paths and bare command names follow the documented

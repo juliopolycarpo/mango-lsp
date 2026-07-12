@@ -11,23 +11,24 @@ snapshot below links its complete contract.
 
 | Field | Value |
 | --- | --- |
-| Phase | First vertical flow planning |
-| Implementation state | S002 delivered and revised a bounded direct-child STDIO/LSP lifecycle with framing, correlation, stderr draining, forced cleanup, and a deterministic fake server. A complete S003 contract is now available for review; no S003 implementation is authorized. |
-| Authorized stage | **None — planning checkpoint** |
-| Contract | Proposed S003: [`docs/stages/S003-configuration-backed-workspace-symbols.md`](stages/S003-configuration-backed-workspace-symbols.md), complete draft pending maintainer review and explicit authorization. Completed S002 remains at [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md). |
-| Progress | S002 was delivered in [PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3) and its failure paths were corrected in [PR #4](https://github.com/juliopolycarpo/mango-lsp/pull/4) at `9f5692e`. The S003 contract now specifies an explicit one-server TOML configuration, a `workspace-symbols` CLI operation, a normalized JSON result, redacted JSON Lines events, and deterministic three-OS evidence; implementation has not started. |
-| Working branch or worktree | No implementation branch is authorized. The S003 contract is a planning artifact only until its review and authorization transition are recorded here. |
-| Last coherent checkpoint | Revised S002 behavior is on `main` with current cross-platform evidence, and the complete S003 draft is recoverable from this repository. Q-005/Q-006 remain resolved as D-012/D-013. |
-| Remaining work | Review the S003 contract, accept or revise its public boundaries, record decisions resolving Q-004 and Q-007, and explicitly authorize S003 before any implementation. Q-009 resolves from S003 implementation evidence. |
+| Phase | First vertical flow — S003 authorized |
+| Implementation state | S002 delivered and revised a bounded direct-child STDIO/LSP lifecycle with framing, correlation, stderr draining, forced cleanup, and a deterministic fake server. The S003 contract has been maintainer-reviewed, refined, and accepted; S003 implementation is authorized but has not started. |
+| Authorized stage | **S003 — configuration-backed workspace symbol flow** |
+| Contract | Authorized S003: [`docs/stages/S003-configuration-backed-workspace-symbols.md`](stages/S003-configuration-backed-workspace-symbols.md), accepted by maintainer review on 2026-07-12 with Q-004/Q-007 resolved as D-014/D-015 in `docs/PROJECT.md`. Completed S002 remains at [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md). |
+| Progress | S002 was delivered in [PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3) and its failure paths were corrected in [PR #4](https://github.com/juliopolycarpo/mango-lsp/pull/4) at `9f5692e`. The accepted S003 contract specifies an explicit one-server TOML configuration, a `workspace-symbols` CLI operation, a normalized JSON result, redacted JSON Lines events, and deterministic three-OS evidence. Review refinements closed three public-contract gaps (see the active-stage working record); implementation has not started. |
+| Working branch or worktree | None yet for implementation. S003 work must begin on a writable non-protected implementation branch per the contract; this authorization was recorded from the documentation branch `docs/s003-configuration-vertical-flow`. |
+| Last coherent checkpoint | Revised S002 behavior is on `main` with current cross-platform evidence; the accepted S003 contract, D-014/D-015, and this authorization transition are recoverable from this repository. |
+| Remaining work | Implement S003 per its contract on a writable branch: configuration boundary, downstream one-operation session, normalized envelope and event writers, fake-server modes, `vertical_flow` tests, and the three-OS CI gate. Resolve Q-009 from implementation evidence. |
 | Validation evidence | Revised S002 [Actions run 29200218085](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29200218085) passed format/lint plus focused and full tests on Ubuntu, macOS, and Windows. Job logs show 12/12 focused `downstream_lifecycle_*` tests on every OS, including the PR #4 diagnostic-preservation regression; the complete suite passed 24 tests per OS. S002 guarantees direct-child cleanup only; descendant process-tree and real-server behavior remain unverified. |
-| Blockers | None for planning. Q-004 and Q-007 are deliberate authorization prerequisites; Q-011 remains required only before public distribution. |
+| Blockers | None. Q-009 resolves during S003 implementation; Q-011 remains required only before public distribution. |
 
 S002's completion dependency for S003 is satisfied by the squash-merge of
 [PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3) and the follow-up
 failure-path correction in [PR #4](https://github.com/juliopolycarpo/mango-lsp/pull/4).
-S003 is dependency-unblocked and has a complete draft contract, but it still
-requires maintainer review, Q-004/Q-007 decisions, and explicit authorization
-before implementation.
+S003's authorization prerequisites were satisfied on 2026-07-12: the contract
+was maintainer-reviewed and refined, Q-004 and Q-007 were resolved as accepted
+decisions D-014 and D-015 in `docs/PROJECT.md`, and this file now names S003 as
+the authorized stage.
 
 ## Near-term stage sequence
 
@@ -39,7 +40,7 @@ the first vertical flow rather than expanded into a speculative backlog.
 | P000 | Establish product, decision, state, stage, and handoff sources of truth. Gate: a clean session can identify authorized work and its objective checks without chat history. | None | Complete in the initial repository structure |
 | S001 | Establish a reproducible Rust binary whose help, version, invalid-input behavior, tests, lint, formatting, and cross-platform CI are observable. | P000 | Complete in [PR #1](https://github.com/juliopolycarpo/mango-lsp/pull/1), squash commit `40c8d0f` |
 | S002 | Prove a bounded downstream STDIO/LSP lifecycle with a deterministic fake: spawn, frame one interaction, correlate it, drain diagnostics, and shut down without orphaning the child. Exact API and crate boundaries remain open. | S001 | Complete in [PR #3](https://github.com/juliopolycarpo/mango-lsp/pull/3). Contract: [`docs/stages/S002-downstream-stdio-lifecycle.md`](stages/S002-downstream-stdio-lifecycle.md) |
-| S003 | Complete the first configuration-backed vertical flow: explicit one-server TOML, supervised launch, one `workspace/symbol` interaction, normalized JSON result, redacted JSON Lines events, and controlled shutdown. | Revised S002; Q-004/Q-007 before authorization; Q-009 during implementation | [Complete draft contract](stages/S003-configuration-backed-workspace-symbols.md) pending review and decision recording; **not authorized** |
+| S003 | Complete the first configuration-backed vertical flow: explicit one-server TOML, supervised launch, one `workspace/symbol` interaction, normalized JSON result, redacted JSON Lines events, and controlled shutdown. | Revised S002; Q-004/Q-007 before authorization; Q-009 during implementation | **Authorized** — [contract](stages/S003-configuration-backed-workspace-symbols.md) accepted 2026-07-12 with Q-004/Q-007 resolved as D-014/D-015; implementation not started |
 | Checkpoint | Review vertical-flow evidence before specifying multi-server routing, public schema generation, resilience hardening, packaging, or releases. | S003 | Not authorized |
 
 ### Gate policy
@@ -58,16 +59,16 @@ the first vertical flow rather than expanded into a speculative backlog.
 
 | Field | Current record |
 | --- | --- |
-| Stage | None — planning checkpoint; S002 complete and revised; S003 contract drafted |
-| Owner/session | No active implementation stage |
-| Branch | None for implementation; the contract may be reviewed on a documentation branch without authorizing S003. |
-| Last completed unit | Revised S002 framing, protocol, lifecycle session, fake server, 12 process-level `downstream_lifecycle_*` tests, D-012/D-013, and three-OS CI evidence at `9f5692e` |
-| Next action | Review [`docs/stages/S003-configuration-backed-workspace-symbols.md`](stages/S003-configuration-backed-workspace-symbols.md), resolve Q-004/Q-007 if its proposed boundaries are accepted, and record a separate explicit authorization transition. Do not implement S003 before then. |
-| Changed paths | Planning artifact only: `docs/stages/S003-configuration-backed-workspace-symbols.md` and `docs/STATUS.md`. No S003 implementation paths are active. |
-| Checks run | S003 planning artifact: `git diff --check`, local linked-file existence checks, `cargo metadata --no-deps --format-version 1`, and `cargo fmt --all -- --check` passed; `cargo test --all-targets --locked` passed 24 tests (9 unit, 3 CLI, 12 lifecycle). Revised S002 CI: [run 29200218085](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29200218085) passed format/lint and all test jobs; focused lifecycle suite passed 12/12 on Ubuntu, macOS, and Windows, and the complete suite passed 24 tests per OS. Workflow bounds remain 10 minutes for quality and 20 minutes per test job. |
+| Stage | S003 — authorized 2026-07-12; implementation not started |
+| Owner/session | Unassigned; the next implementation session owns this record. |
+| Branch | None yet; implementation must begin on a writable non-protected S003 branch. The review and authorization records were made on `docs/s003-configuration-vertical-flow`. |
+| Last completed unit | Maintainer review and acceptance of the S003 contract. Review refinements closed three public-contract gaps before freezing: (1) exit statuses now cover every bounded error kind (`spawn` and `unsupported_capability` explicitly exit 1); (2) an invalid `--query` is a `query` boundary rejection with its own bounded error kind and exit 2; (3) server ID validity is defined (non-empty, bounded length, ASCII lowercase letters, digits, `-`, `_`). Q-004/Q-007 recorded as D-014/D-015. |
+| Next action | Begin S003 implementation on a writable branch per the contract: strict configuration/public-envelope boundary first, then the downstream one-operation session, fake-server modes, and `vertical_flow` process tests. Resolve Q-009 with implementation evidence. |
+| Changed paths | Authorization records only: `docs/stages/S003-configuration-backed-workspace-symbols.md` (review refinements), `docs/PROJECT.md` (D-014/D-015, Q-004/Q-007 closed), and `docs/STATUS.md`. No S003 implementation paths are active. |
+| Checks run | S003 authorization records: `git diff --check` and linked-file existence checks passed; contract cross-checked against the repository (commits `7720278`/`9f5692e` on `main`, D-001–D-013 and R-001–R-009 present, CI matrix with 10/20-minute bounds, pinned Rust 1.97.0, S002 limits in `src/frame.rs`/`src/lifecycle.rs`). Prior planning-artifact checks and revised S002 CI evidence ([run 29200218085](https://github.com/juliopolycarpo/mango-lsp/actions/runs/29200218085): 12/12 focused lifecycle tests and the 24-test complete suite on Ubuntu, macOS, and Windows) remain current; no Rust source changed in this transition. |
 | Failed or unavailable checks | None. |
-| Open implementation decisions | Q-004 and Q-007 must be resolved before S003 authorization; Q-009 resolves from S003 evidence. Q-003 remains open until release planning. |
-| Resume notes | S003 proposes `workspace-symbols --config <FILE> --workspace <DIR> --query <TEXT>`, explicit version 1 one-server TOML, one JSON stdout envelope, and redacted JSON Lines stderr events. Existing defaults remain: header 64 KiB, body 16 MiB, stderr retention 64 KiB, operation timeout 5s, force-shutdown 2s. Fake binary is test infrastructure only; cleanup remains direct-child only. |
+| Open implementation decisions | Q-009 resolves from S003 implementation evidence. Q-003 remains open until release planning. |
+| Resume notes | Accepted S003 specifies `workspace-symbols --config <FILE> --workspace <DIR> --query <TEXT>`, explicit version 1 one-server TOML, one JSON stdout envelope with ten bounded error kinds (including `query`), and redacted JSON Lines stderr events. Existing defaults remain: header 64 KiB, body 16 MiB, stderr retention 64 KiB, operation timeout 5s, force-shutdown 2s. Fake binary is test infrastructure only; cleanup remains direct-child only. |
 
 When a stage finishes, replace this record with its outcome and validation
 evidence, move it into the history table, and leave the next active record empty
@@ -94,9 +95,9 @@ An entry records an opportunity; it does not authorize implementation. Use IDs
 
 ## Current deviations and blockers
 
-None. Revised S002 three-OS CI evidence is complete. S003 remains a planning
-artifact until its public boundaries are reviewed, Q-004/Q-007 are resolved,
-and authorization is explicit. Q-011 remains deliberately open until public
+None. Revised S002 three-OS CI evidence is complete. S003 is explicitly
+authorized with its contract accepted and Q-004/Q-007 resolved as D-014/D-015;
+implementation has not started. Q-011 remains deliberately open until public
 distribution.
 
 ## State transition checklist
