@@ -33,22 +33,6 @@ impl ErrorKind {
             _ => 1,
         }
     }
-
-    #[must_use]
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Configuration => "configuration",
-            Self::Workspace => "workspace",
-            Self::Query => "query",
-            Self::Spawn => "spawn",
-            Self::UnsupportedCapability => "unsupported_capability",
-            Self::Protocol => "protocol",
-            Self::Downstream => "downstream",
-            Self::Timeout => "timeout",
-            Self::Cleanup => "cleanup",
-            Self::Output => "output",
-        }
-    }
 }
 
 /// Cleanup outcome reported in failure envelopes and terminal events.
@@ -58,17 +42,6 @@ pub enum CleanupState {
     NotRequired,
     Completed,
     Failed,
-}
-
-impl CleanupState {
-    #[must_use]
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::NotRequired => "not_required",
-            Self::Completed => "completed",
-            Self::Failed => "failed",
-        }
-    }
 }
 
 /// Normalized symbol emitted in a successful result.
@@ -269,10 +242,13 @@ impl<W: std::io::Write> EventWriter<W> {
         cleanup: CleanupState,
     ) -> Result<(), std::io::Error> {
         let mut extra = serde_json::Map::new();
-        extra.insert("kind".to_owned(), Value::String(kind.as_str().to_owned()));
+        extra.insert(
+            "kind".to_owned(),
+            serde_json::to_value(kind).map_err(json_io_error)?,
+        );
         extra.insert(
             "cleanup".to_owned(),
-            Value::String(cleanup.as_str().to_owned()),
+            serde_json::to_value(cleanup).map_err(json_io_error)?,
         );
         self.emit(EventLevel::Error, "operation_failed", server, extra)
     }

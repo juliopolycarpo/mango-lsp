@@ -85,6 +85,7 @@ fn run(mode: Mode) -> io::Result<()> {
     };
 
     if mode == Mode::StallInitialize {
+        // Read forever without responding so the supervisor hits its bound.
         let mut sink = Vec::new();
         let _ = stdin.read_to_end(&mut sink);
         return Ok(());
@@ -102,12 +103,15 @@ fn run(mode: Mode) -> io::Result<()> {
     }
 
     if mode == Mode::OversizedBody {
+        // Declare a body larger than the test-configured decoder limit.
         let _initialize = read_request(&mut stdin, limits, "initialize")?;
         stdout.write_all(b"Content-Length: 1048576\r\n\r\n")?;
         stdout.flush()?;
         return Ok(());
     }
 
+    // Consume the request first so the supervisor's write deterministically
+    // succeeds, then die with only a stderr trace and no response.
     let initialize = read_request(&mut stdin, limits, "initialize")?;
     if mode == Mode::StderrThenExit {
         stderr.write_all(b"stderr-then-exit: simulated crash before initialize response\n")?;
@@ -116,6 +120,7 @@ fn run(mode: Mode) -> io::Result<()> {
     }
 
     if mode == Mode::StderrFlood {
+        // Exceed the default 64 KiB retention with at least 4 MiB of stderr.
         let chunk = vec![b'x'; 64 * 1024];
         for _ in 0..(4 * 1024 * 1024 / chunk.len()) {
             stderr.write_all(&chunk)?;
@@ -144,6 +149,7 @@ fn run(mode: Mode) -> io::Result<()> {
     let initialize_id = initialize.id.clone();
     match mode {
         Mode::BadJsonrpc => {
+            // Bypass typed serialization so jsonrpc can be wrong on purpose.
             write_raw(
                 &mut stdout,
                 &json!({
@@ -205,6 +211,7 @@ fn run(mode: Mode) -> io::Result<()> {
         mode,
         Mode::BadJsonrpc | Mode::MismatchedId | Mode::MalformedFrame | Mode::OversizedBody
     ) {
+        // Hostile protocol modes still need to stay alive until the supervisor cleans up.
         let mut sink = Vec::new();
         let _ = stdin.read_to_end(&mut sink);
         return Ok(());
@@ -213,29 +220,7 @@ fn run(mode: Mode) -> io::Result<()> {
     let initialized = read_notification(&mut stdin, limits, "initialized")?;
     assert_eq!(initialized.method, "initialized");
 
-    let shutdown = read_request(&mut stdin, limits, "shutdown")?;
-    if mode == Mode::HangShutdown {
-        let mut sink = Vec::new();
-        let _ = stdin.read_to_end(&mut sink);
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(60));
-        }
-    }
-
-    write_response(
-        &mut stdout,
-        ResponseMessage {
-            jsonrpc: JsonRpcVersion::V2,
-            id: Some(shutdown.id),
-            result: Some(Value::Null),
-            error: None,
-        },
-        false,
-    )?;
-
-    let exit = read_notification(&mut stdin, limits, "exit")?;
-    assert_eq!(exit.method, "exit");
-    Ok(())
+    finish_shutdown(&mut stdin, &mut stdout, limits, mode == Mode::HangShutdown)
 }
 
 fn run_workspace_flow(
@@ -387,8 +372,10 @@ fn finish_shutdown(
 ) -> io::Result<()> {
     let shutdown = read_request(stdin, limits, "shutdown")?;
     if hang {
+        // Acknowledge nothing and ignore exit so forced cleanup is required.
         let mut sink = Vec::new();
         let _ = stdin.read_to_end(&mut sink);
+        // Park until killed.
         loop {
             std::thread::sleep(std::time::Duration::from_secs(60));
         }

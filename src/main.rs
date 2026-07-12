@@ -10,8 +10,6 @@ fn main() -> ExitCode {
     let matches = Command::new(env!("CARGO_PKG_NAME"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .version(env!("CARGO_PKG_VERSION"))
-        .subcommand_required(false)
-        .arg_required_else_help(false)
         .subcommand(
             Command::new("workspace-symbols")
                 .about("Query workspace symbols through one explicitly configured language server")
@@ -62,10 +60,7 @@ fn main() -> ExitCode {
                 &mut stderr,
             )
         }
-        None => ExitCode::SUCCESS,
-        Some((name, _)) => {
-            eprintln!("error: unrecognized subcommand '{name}'");
-            ExitCode::from(2)
-        }
+        // Clap rejects unknown subcommands itself; only "no subcommand" remains.
+        _ => ExitCode::SUCCESS,
     }
 }
