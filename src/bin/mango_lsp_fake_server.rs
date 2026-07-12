@@ -22,6 +22,7 @@ enum Mode {
     MalformedFrame,
     OversizedBody,
     EarlyExit,
+    StderrThenExit,
     HangShutdown,
     StallInitialize,
 }
@@ -54,6 +55,7 @@ fn parse_mode(raw: Option<&str>) -> Result<Mode, String> {
         "malformed-frame" => Ok(Mode::MalformedFrame),
         "oversized-body" => Ok(Mode::OversizedBody),
         "early-exit" => Ok(Mode::EarlyExit),
+        "stderr-then-exit" => Ok(Mode::StderrThenExit),
         "hang-shutdown" => Ok(Mode::HangShutdown),
         "stall-initialize" => Ok(Mode::StallInitialize),
         other => Err(format!("unknown fake-server mode: {other}")),
@@ -96,6 +98,14 @@ fn run(mode: Mode) -> io::Result<()> {
     }
 
     let initialize = read_request(&mut stdin, limits, "initialize")?;
+    if mode == Mode::StderrThenExit {
+        // Consume the request first so the supervisor's write deterministically
+        // succeeds, then die with only a stderr trace and no response.
+        stderr.write_all(b"stderr-then-exit: simulated crash before initialize response\n")?;
+        stderr.flush()?;
+        return Ok(());
+    }
+
     if mode == Mode::StderrFlood {
         // Exceed the default 64 KiB retention with at least 4 MiB of stderr.
         let chunk = vec![b'x'; 64 * 1024];

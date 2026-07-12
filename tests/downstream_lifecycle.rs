@@ -136,6 +136,25 @@ fn downstream_lifecycle_early_exit_fails_bounded() {
 }
 
 #[test]
+fn downstream_lifecycle_child_exit_preserves_stderr_diagnostics() {
+    let error = spawn_mode("stderr-then-exit")
+        .run_lifecycle()
+        .expect_err("exit before the initialize response must fail");
+    let DownstreamError::ChildExited { diagnostics, .. } = &error else {
+        panic!("expected ChildExited, got: {error}");
+    };
+    let text = diagnostics.lossy_text();
+    assert!(
+        text.contains("simulated crash before initialize response"),
+        "error should retain the child's stderr output, got: {text:?}"
+    );
+    assert!(
+        !diagnostics.truncated,
+        "short stderr output must not be reported as truncated"
+    );
+}
+
+#[test]
 fn downstream_lifecycle_forced_cleanup_on_hang_shutdown() {
     let started = Instant::now();
     let error = spawn_mode("hang-shutdown")
