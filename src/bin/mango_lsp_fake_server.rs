@@ -1,4 +1,4 @@
-//! Deterministic hostile/compliant fake language server for S002 tests.
+//! Deterministic hostile/compliant fake language server for S002/S003 tests.
 //!
 //! This binary is a test fixture. It is not part of the product CLI surface.
 
@@ -10,7 +10,10 @@ use mango_lsp::protocol::{
     JsonRpcId, JsonRpcMessage, JsonRpcVersion, NotificationMessage, RequestMessage,
     ResponseMessage, parse_message,
 };
-use serde_json::json;
+use serde_json::{Value, json};
+
+const SECRET_STDERR: &str = "FAKE_STDERR_SECRET_SENTINEL";
+const SECRET_LOG: &str = "FAKE_LOGMESSAGE_SECRET_SENTINEL";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
@@ -25,6 +28,11 @@ enum Mode {
     StderrThenExit,
     HangShutdown,
     StallInitialize,
+    WorkspaceSymbols,
+    NoSymbolCapability,
+    MalformedSymbols,
+    SymbolError,
+    StallSymbol,
 }
 
 fn main() -> ExitCode {
@@ -58,6 +66,11 @@ fn parse_mode(raw: Option<&str>) -> Result<Mode, String> {
         "stderr-then-exit" => Ok(Mode::StderrThenExit),
         "hang-shutdown" => Ok(Mode::HangShutdown),
         "stall-initialize" => Ok(Mode::StallInitialize),
+        "workspace-symbols" => Ok(Mode::WorkspaceSymbols),
+        "no-symbol-capability" => Ok(Mode::NoSymbolCapability),
+        "malformed-symbols" => Ok(Mode::MalformedSymbols),
+        "symbol-error" => Ok(Mode::SymbolError),
+        "stall-symbol" => Ok(Mode::StallSymbol),
         other => Err(format!("unknown fake-server mode: {other}")),
     }
 }
@@ -90,17 +103,17 @@ fn run(mode: Mode) -> io::Result<()> {
     }
 
     if mode == Mode::OversizedBody {
-        let _initialize = read_request(&mut stdin, limits, "initialize")?;
         // Declare a body larger than the test-configured decoder limit.
+        let _initialize = read_request(&mut stdin, limits, "initialize")?;
         stdout.write_all(b"Content-Length: 1048576\r\n\r\n")?;
         stdout.flush()?;
         return Ok(());
     }
 
+    // Consume the request first so the supervisor's write deterministically
+    // succeeds, then die with only a stderr trace and no response.
     let initialize = read_request(&mut stdin, limits, "initialize")?;
     if mode == Mode::StderrThenExit {
-        // Consume the request first so the supervisor's write deterministically
-        // succeeds, then die with only a stderr trace and no response.
         stderr.write_all(b"stderr-then-exit: simulated crash before initialize response\n")?;
         stderr.flush()?;
         return Ok(());
@@ -113,6 +126,24 @@ fn run(mode: Mode) -> io::Result<()> {
             stderr.write_all(&chunk)?;
         }
         stderr.flush()?;
+    }
+
+    if matches!(
+        mode,
+        Mode::WorkspaceSymbols
+            | Mode::NoSymbolCapability
+            | Mode::MalformedSymbols
+            | Mode::SymbolError
+            | Mode::StallSymbol
+    ) {
+        return run_workspace_flow(
+            mode,
+            initialize,
+            &mut stdin,
+            &mut stdout,
+            &mut stderr,
+            limits,
+        );
     }
 
     let initialize_id = initialize.id.clone();
@@ -189,8 +220,158 @@ fn run(mode: Mode) -> io::Result<()> {
     let initialized = read_notification(&mut stdin, limits, "initialized")?;
     assert_eq!(initialized.method, "initialized");
 
-    let shutdown = read_request(&mut stdin, limits, "shutdown")?;
-    if mode == Mode::HangShutdown {
+    finish_shutdown(&mut stdin, &mut stdout, limits, mode == Mode::HangShutdown)
+}
+
+fn run_workspace_flow(
+    mode: Mode,
+    initialize: RequestMessage,
+    stdin: &mut impl Read,
+    stdout: &mut impl Write,
+    stderr: &mut impl Write,
+    limits: FrameLimits,
+) -> io::Result<()> {
+    stderr.write_all(format!("{SECRET_STDERR}\n").as_bytes())?;
+    stderr.flush()?;
+
+    // Interleave a logMessage notification before the initialize response.
+    write_message(
+        stdout,
+        &JsonRpcMessage::Notification(NotificationMessage::new(
+            "window/logMessage",
+            Some(json!({
+                "type": 3,
+                "message": SECRET_LOG
+            })),
+        )),
+        false,
+    )?;
+
+    let capability = match mode {
+        Mode::NoSymbolCapability => json!(false),
+        _ => json!(true),
+    };
+    write_response(
+        stdout,
+        ResponseMessage {
+            jsonrpc: JsonRpcVersion::V2,
+            id: Some(initialize.id.clone()),
+            result: Some(json!({
+                "capabilities": {
+                    "workspaceSymbolProvider": capability
+                },
+                "serverInfo": { "name": "fake-workspace" }
+            })),
+            error: None,
+        },
+        false,
+    )?;
+
+    let initialized = read_notification(stdin, limits, "initialized")?;
+    assert_eq!(initialized.method, "initialized");
+
+    if mode == Mode::NoSymbolCapability {
+        // Supervisor should shut down without sending workspace/symbol.
+        return finish_shutdown(stdin, stdout, limits, false);
+    }
+
+    // Client sends workspace/symbol first, then waits. Interleave a
+    // workspace/workspaceFolders request before answering the symbol query.
+    let symbol_request = read_request(stdin, limits, "workspace/symbol")?;
+
+    let folders_id = JsonRpcId::number(9001);
+    write_message(
+        stdout,
+        &JsonRpcMessage::Request(RequestMessage::new(
+            folders_id.clone(),
+            "workspace/workspaceFolders",
+            None,
+        )),
+        false,
+    )?;
+    let folders_body = decode_frame(stdin, limits).map_err(to_io)?;
+    match parse_message(&folders_body)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?
+    {
+        JsonRpcMessage::Response(response) if response.id.as_ref() == Some(&folders_id) => {}
+        other => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("expected workspaceFolders response, got {other:?}"),
+            ));
+        }
+    }
+
+    if mode == Mode::StallSymbol {
+        let mut sink = Vec::new();
+        let _ = stdin.read_to_end(&mut sink);
+        return Ok(());
+    }
+
+    match mode {
+        Mode::SymbolError => {
+            write_response(
+                stdout,
+                ResponseMessage {
+                    jsonrpc: JsonRpcVersion::V2,
+                    id: Some(symbol_request.id),
+                    result: None,
+                    error: Some(mango_lsp::protocol::ResponseError {
+                        code: -32000,
+                        message: "symbol query failed".to_owned(),
+                        data: None,
+                    }),
+                },
+                false,
+            )?;
+        }
+        Mode::MalformedSymbols => {
+            write_response(
+                stdout,
+                ResponseMessage {
+                    jsonrpc: JsonRpcVersion::V2,
+                    id: Some(symbol_request.id),
+                    result: Some(json!([{ "name": "Widget", "kind": 5 }])),
+                    error: None,
+                },
+                false,
+            )?;
+        }
+        _ => {
+            write_response(
+                stdout,
+                ResponseMessage {
+                    jsonrpc: JsonRpcVersion::V2,
+                    id: Some(symbol_request.id),
+                    result: Some(json!([{
+                        "name": "Widget",
+                        "kind": 5,
+                        "location": {
+                            "uri": "file:///workspace/src/widget.rs",
+                            "range": {
+                                "start": { "line": 0, "character": 0 },
+                                "end": { "line": 0, "character": 6 }
+                            }
+                        }
+                    }])),
+                    error: None,
+                },
+                false,
+            )?;
+        }
+    }
+
+    finish_shutdown(stdin, stdout, limits, false)
+}
+
+fn finish_shutdown(
+    stdin: &mut impl Read,
+    stdout: &mut impl Write,
+    limits: FrameLimits,
+    hang: bool,
+) -> io::Result<()> {
+    let shutdown = read_request(stdin, limits, "shutdown")?;
+    if hang {
         // Acknowledge nothing and ignore exit so forced cleanup is required.
         let mut sink = Vec::new();
         let _ = stdin.read_to_end(&mut sink);
@@ -199,19 +380,17 @@ fn run(mode: Mode) -> io::Result<()> {
             std::thread::sleep(std::time::Duration::from_secs(60));
         }
     }
-
     write_response(
-        &mut stdout,
+        stdout,
         ResponseMessage {
             jsonrpc: JsonRpcVersion::V2,
             id: Some(shutdown.id),
-            result: Some(serde_json::Value::Null),
+            result: Some(Value::Null),
             error: None,
         },
         false,
     )?;
-
-    let exit = read_notification(&mut stdin, limits, "exit")?;
+    let exit = read_notification(stdin, limits, "exit")?;
     assert_eq!(exit.method, "exit");
     Ok(())
 }
@@ -253,7 +432,15 @@ fn write_response(
     response: ResponseMessage,
     fragmented: bool,
 ) -> io::Result<()> {
-    let body = serde_json::to_vec(&JsonRpcMessage::Response(response))
+    write_message(stdout, &JsonRpcMessage::Response(response), fragmented)
+}
+
+fn write_message(
+    stdout: &mut impl Write,
+    message: &JsonRpcMessage,
+    fragmented: bool,
+) -> io::Result<()> {
+    let body = serde_json::to_vec(message)
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
     write_raw_bytes(stdout, &body, fragmented)
 }

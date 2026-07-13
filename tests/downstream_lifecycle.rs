@@ -168,7 +168,10 @@ fn downstream_lifecycle_forced_cleanup_on_hang_shutdown() {
     );
     let text = error.to_string();
     assert!(
-        text.contains("timed out") || text.contains("cleanup"),
+        text.contains("timed out")
+            || text.contains("timeout")
+            || text.contains("exceeded")
+            || text.contains("cleanup"),
         "error should identify timeout/cleanup: {text}"
     );
 }

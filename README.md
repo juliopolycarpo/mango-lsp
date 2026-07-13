@@ -6,10 +6,10 @@ route and aggregate useful operations, and expose a smaller, versioned interface
 than unrestricted LSP access. MangoStudio will be its primary graphical
 consumer, but the project and its release cycle are independent.
 
-The repository produces a `mango-lsp` executable with bootstrap help and version
-behavior, plus an internal library that can own one direct-child LSP lifecycle
-over STDIO. A deterministic `mango-lsp-fake-server` binary exists only as test
-infrastructure and is not a product command.
+The repository produces a `mango-lsp` executable with a configuration-backed
+`workspace-symbols` operation, plus an internal library that owns one
+direct-child LSP session over STDIO. A deterministic `mango-lsp-fake-server`
+binary exists only as test infrastructure and is not a product command.
 
 ## Contributor quick start
 
@@ -22,16 +22,39 @@ cargo build --locked
 cargo fmt --all -- --check
 cargo check --all-targets --locked
 cargo clippy --all-targets --locked -- -D warnings
-cargo test --all-targets --locked downstream_lifecycle -- --nocapture
+cargo test --all-targets --locked vertical_flow -- --nocapture
 cargo test --all-targets --locked
 cargo run --locked -- --help
 cargo run --locked -- --version
+cargo run --locked -- workspace-symbols --help
 ```
 
 Builds and tests do not require a language server, credentials, or network
 access after Cargo has fetched the locked dependencies. The focused
-`downstream_lifecycle` filter exercises the S002 fake-server proof, including
-backpressure and forced-cleanup cases.
+`vertical_flow` filter exercises the S003 fake-server proof, including
+redaction, unsupported capability, timeout, and cleanup cases.
+
+### Example configuration
+
+```toml
+schema_version = 1
+
+[server]
+id = "fixture"
+command = "/absolute/path/to/language-server"
+args = ["--stdio"]
+```
+
+```console
+cargo run --locked -- workspace-symbols \
+  --config ./path/to/config.toml \
+  --workspace ./path/to/workspace \
+  --query Widget
+```
+
+A successful invocation writes one version 1 JSON result object to stdout and
+redacted JSON Lines lifecycle events to stderr. Configuration selection is
+explicit only: mango-lsp does not search for default files or walk parents.
 
 ## Start here
 
@@ -62,11 +85,10 @@ stage contracts or duplicate accepted decisions in multiple files.
 
 ## Current direction
 
-The initial delivery path is deliberately short: establish a portable Rust CLI
-baseline, prove a deterministic downstream STDIO/LSP lifecycle with a test
-double, and then expose a small configuration-backed vertical flow. The exact
-shape of later stages must be revised from evidence rather than detailed in
-advance.
+The initial delivery path established a portable Rust CLI baseline, proved a
+deterministic downstream STDIO/LSP lifecycle with a test double, and delivered
+the first configuration-backed vertical flow. Later stages must be revised from
+that evidence rather than detailed in advance.
 
 All repository content is written in English unless a documented interoperability
 or localization case requires otherwise.

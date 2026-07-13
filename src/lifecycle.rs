@@ -16,10 +16,12 @@ use crate::protocol::{
 };
 
 /// Explicit child command constructed by the caller. Never interpreted by a shell.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChildCommand {
     pub program: std::path::PathBuf,
     pub args: Vec<String>,
+    /// Optional working directory for the direct child.
+    pub current_dir: Option<std::path::PathBuf>,
 }
 
 impl ChildCommand {
@@ -28,6 +30,7 @@ impl ChildCommand {
         Self {
             program: program.into(),
             args: Vec::new(),
+            current_dir: None,
         }
     }
 
@@ -38,6 +41,12 @@ impl ChildCommand {
         S: Into<String>,
     {
         self.args = args.into_iter().map(Into::into).collect();
+        self
+    }
+
+    #[must_use]
+    pub fn current_dir(mut self, dir: impl Into<std::path::PathBuf>) -> Self {
+        self.current_dir = Some(dir.into());
         self
     }
 }
@@ -79,6 +88,38 @@ pub struct LifecycleOutcome {
     pub exit_status: ExitStatus,
 }
 
+/// Inputs for one configuration-backed workspace/symbol session.
+#[derive(Debug, Clone, Copy)]
+pub struct WorkspaceSymbolParams<'a> {
+    pub process_id: u32,
+    pub root_uri: &'a str,
+    pub workspace_folder_name: &'a str,
+    pub query: &'a str,
+}
+
+/// Redacted metadata for an observed downstream notification.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NotificationMeta {
+    pub method: String,
+    pub severity: Option<i64>,
+}
+
+/// Successful workspace/symbol evidence after the direct child has been reaped.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WorkspaceSymbolOutcome {
+    pub initialize: InitializeResult,
+    pub symbols_raw: Value,
+    pub notifications: Vec<NotificationMeta>,
+    pub diagnostics: DiagnosticSummary,
+    pub exit_status: ExitStatus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PendingPhase {
+    Initialize,
+    Operation,
+}
+
 /// Failures from the bounded downstream lifecycle.
 #[derive(Debug)]
 pub enum DownstreamError {
@@ -97,6 +138,7 @@ pub enum DownstreamError {
     },
     Timeout {
         operation: &'static str,
+        diagnostics: DiagnosticSummary,
     },
     ChildExited {
         operation: &'static str,
@@ -105,6 +147,11 @@ pub enum DownstreamError {
     },
     Cleanup {
         operation: &'static str,
+        message: String,
+        diagnostics: DiagnosticSummary,
+    },
+    /// Server did not advertise workspace symbol support.
+    UnsupportedCapability {
         message: String,
         diagnostics: DiagnosticSummary,
     },
@@ -123,7 +170,9 @@ impl std::fmt::Display for DownstreamError {
             Self::Protocol { operation, source } => {
                 write!(f, "{operation} failed with protocol error: {source}")
             }
-            Self::Timeout { operation } => write!(f, "{operation} exceeded its configured bound"),
+            Self::Timeout { operation, .. } => {
+                write!(f, "{operation} exceeded its configured bound")
+            }
             Self::ChildExited {
                 operation,
                 status,
@@ -142,6 +191,7 @@ impl std::fmt::Display for DownstreamError {
                 "{operation} cleanup failed: {message}; diagnostics truncated={}, observed={}",
                 diagnostics.truncated, diagnostics.total_observed
             ),
+            Self::UnsupportedCapability { message, .. } => write!(f, "{message}"),
         }
     }
 }
@@ -177,14 +227,20 @@ enum ReaderEvent {
 
 impl DownstreamSession {
     /// Spawn `command` with piped STDIO and start concurrent stderr draining.
+    ///
+    /// The child inherits the parent environment. When `current_dir` is set it
+    /// becomes the child's working directory.
     pub fn spawn(command: ChildCommand, limits: DownstreamLimits) -> Result<Self, DownstreamError> {
-        let mut child = Command::new(&command.program)
+        let mut builder = Command::new(&command.program);
+        builder
             .args(&command.args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(DownstreamError::Spawn)?;
+            .stderr(Stdio::piped());
+        if let Some(dir) = &command.current_dir {
+            builder.current_dir(dir);
+        }
+        let mut child = builder.spawn().map_err(DownstreamError::Spawn)?;
 
         let stdin = child.stdin.take().ok_or_else(|| DownstreamError::Cleanup {
             operation: "spawn",
@@ -297,6 +353,110 @@ impl DownstreamSession {
         }
     }
 
+    /// Run initialize → workspace/symbol → shutdown for one configured workspace.
+    pub fn run_workspace_symbols(
+        mut self,
+        params: WorkspaceSymbolParams<'_>,
+    ) -> Result<WorkspaceSymbolOutcome, DownstreamError> {
+        let initialize_id = self.allocate_id();
+        let symbol_id = self.allocate_id();
+        let shutdown_id = self.allocate_id();
+        let mut notifications = Vec::new();
+
+        let result = (|| {
+            let init_params = crate::protocol::WorkspaceInitializeParams {
+                process_id: params.process_id,
+                root_uri: params.root_uri.to_owned(),
+                workspace_folder_name: params.workspace_folder_name.to_owned(),
+            };
+            self.write_message(
+                "initialize",
+                &JsonRpcMessage::Request(crate::protocol::workspace_initialize_request(
+                    initialize_id.clone(),
+                    &init_params,
+                )),
+            )?;
+
+            let initialize_value = self.wait_for_correlated_result(
+                "initialize response",
+                &initialize_id,
+                PendingPhase::Initialize,
+                params.root_uri,
+                params.workspace_folder_name,
+                &mut notifications,
+            )?;
+
+            if !crate::protocol::supports_workspace_symbol(&initialize_value) {
+                return Err(DownstreamError::UnsupportedCapability {
+                    message: "server does not advertise workspaceSymbolProvider".to_owned(),
+                    diagnostics: DiagnosticSummary::default(),
+                });
+            }
+
+            self.write_message(
+                "initialized",
+                &JsonRpcMessage::Notification(initialized_notification()),
+            )?;
+            self.write_message(
+                "workspace/symbol",
+                &JsonRpcMessage::Request(crate::protocol::workspace_symbol_request(
+                    symbol_id.clone(),
+                    params.query,
+                )),
+            )?;
+
+            let symbol_value = self.wait_for_correlated_result(
+                "workspace/symbol response",
+                &symbol_id,
+                PendingPhase::Operation,
+                params.root_uri,
+                params.workspace_folder_name,
+                &mut notifications,
+            )?;
+
+            self.write_message(
+                "shutdown",
+                &JsonRpcMessage::Request(shutdown_request(shutdown_id.clone())),
+            )?;
+            self.wait_for_correlated_result(
+                "shutdown response",
+                &shutdown_id,
+                PendingPhase::Operation,
+                params.root_uri,
+                params.workspace_folder_name,
+                &mut notifications,
+            )?;
+
+            self.write_message("exit", &JsonRpcMessage::Notification(exit_notification()))?;
+            self.stdin.take();
+            let exit_status = self.wait_for_exit("graceful exit", self.limits.operation_timeout)?;
+            if !exit_status.success() {
+                return Err(DownstreamError::ChildExited {
+                    operation: "graceful exit",
+                    status: Some(exit_status),
+                    diagnostics: DiagnosticSummary::default(),
+                });
+            }
+
+            let diagnostics = self.join_workers();
+            self.reaped = true;
+            Ok(WorkspaceSymbolOutcome {
+                initialize: InitializeResult {
+                    raw: initialize_value,
+                },
+                symbols_raw: symbol_value,
+                notifications,
+                diagnostics,
+                exit_status,
+            })
+        })();
+
+        match result {
+            Ok(outcome) => Ok(outcome),
+            Err(error) => Err(self.fail_closed(error)),
+        }
+    }
+
     fn allocate_id(&mut self) -> JsonRpcId {
         let id = JsonRpcId::number(self.next_id);
         self.next_id += 1;
@@ -331,7 +491,14 @@ impl DownstreamSession {
         operation: &'static str,
         timeout: Duration,
     ) -> Result<Vec<u8>, DownstreamError> {
-        let deadline = Instant::now() + timeout;
+        self.wait_for_message_until(operation, Instant::now() + timeout)
+    }
+
+    fn wait_for_message_until(
+        &mut self,
+        operation: &'static str,
+        deadline: Instant,
+    ) -> Result<Vec<u8>, DownstreamError> {
         loop {
             // Error paths must not join pipe workers here: the child may still
             // be alive and holding stderr open, so joining could block past the
@@ -347,7 +514,10 @@ impl DownstreamSession {
 
             let remaining = deadline.saturating_duration_since(Instant::now());
             if remaining.is_zero() {
-                return Err(DownstreamError::Timeout { operation });
+                return Err(DownstreamError::Timeout {
+                    operation,
+                    diagnostics: DiagnosticSummary::default(),
+                });
             }
 
             let slice = remaining.min(Duration::from_millis(50));
@@ -377,6 +547,71 @@ impl DownstreamSession {
         }
     }
 
+    fn wait_for_correlated_result(
+        &mut self,
+        operation: &'static str,
+        expected_id: &JsonRpcId,
+        phase: PendingPhase,
+        root_uri: &str,
+        folder_name: &str,
+        notifications: &mut Vec<NotificationMeta>,
+    ) -> Result<Value, DownstreamError> {
+        let deadline = Instant::now() + self.limits.operation_timeout;
+        loop {
+            let body = self.wait_for_message_until(operation, deadline)?;
+            let message = parse_protocol(operation, &body)?;
+            match message {
+                JsonRpcMessage::Response(_) => {
+                    return expect_result(message, expected_id)
+                        .map_err(|source| DownstreamError::Protocol { operation, source });
+                }
+                JsonRpcMessage::Notification(notification) => {
+                    if notification.method == "window/logMessage" {
+                        let severity = notification
+                            .params
+                            .as_ref()
+                            .and_then(|params| params.get("type"))
+                            .and_then(Value::as_i64);
+                        notifications.push(NotificationMeta {
+                            method: notification.method,
+                            severity,
+                        });
+                        continue;
+                    }
+                    return Err(DownstreamError::Protocol {
+                        operation,
+                        source: LspError::UnexpectedMessage(format!(
+                            "unsupported notification {}",
+                            notification.method
+                        )),
+                    });
+                }
+                JsonRpcMessage::Request(request) => {
+                    if phase == PendingPhase::Operation
+                        && request.method == "workspace/workspaceFolders"
+                    {
+                        self.write_message(
+                            "workspace/workspaceFolders response",
+                            &JsonRpcMessage::Response(crate::protocol::workspace_folders_response(
+                                request.id,
+                                root_uri,
+                                folder_name,
+                            )),
+                        )?;
+                        continue;
+                    }
+                    return Err(DownstreamError::Protocol {
+                        operation,
+                        source: LspError::UnexpectedMessage(format!(
+                            "unsupported request {}",
+                            request.method
+                        )),
+                    });
+                }
+            }
+        }
+    }
+
     fn wait_for_exit(
         &mut self,
         operation: &'static str,
@@ -388,7 +623,10 @@ impl DownstreamSession {
                 return Ok(status);
             }
             if Instant::now() >= deadline {
-                return Err(DownstreamError::Timeout { operation });
+                return Err(DownstreamError::Timeout {
+                    operation,
+                    diagnostics: DiagnosticSummary::default(),
+                });
             }
             thread::sleep(Duration::from_millis(10));
         }
@@ -531,11 +769,16 @@ fn enrich_error(error: DownstreamError, diagnostics: DiagnosticSummary) -> Downs
             message,
             diagnostics,
         },
-        DownstreamError::Timeout { operation } => DownstreamError::Cleanup {
+        DownstreamError::Timeout { operation, .. } => DownstreamError::Timeout {
             operation,
-            message: format!("{operation} timed out; direct child was terminated and reaped"),
             diagnostics,
         },
+        DownstreamError::UnsupportedCapability { message, .. } => {
+            DownstreamError::UnsupportedCapability {
+                message,
+                diagnostics,
+            }
+        }
         // Keep protocol/frame/io identity after cleanup so callers can match failures.
         other => other,
     }

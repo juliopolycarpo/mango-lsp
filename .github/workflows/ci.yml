@@ -45,5 +45,7 @@ jobs:
         run: cargo build --locked
       - name: Run focused downstream lifecycle tests
         run: cargo test --all-targets --locked downstream_lifecycle -- --nocapture
+      - name: Run focused vertical flow tests
+        run: cargo test --all-targets --locked vertical_flow -- --nocapture
       - name: Run all tests
         run: cargo test --all-targets --locked
